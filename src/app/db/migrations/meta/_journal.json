@@ -8,6 +8,27 @@
       "when": 1738394193588,
       "tag": "0000_smooth_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1740290751923,
+      "tag": "0001_tan_proemial_gods",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1740292695072,
+      "tag": "0002_busy_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1740297723997,
+      "tag": "0003_misty_starfox",
+      "breakpoints": true
     }
   ]
 }

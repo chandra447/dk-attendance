@@ -1,51 +1,57 @@
 'use client';
 
-import { useUser, useStackApp } from "@stackframe/stack";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser } from "@stackframe/stack";
+import { useEffect, useState } from "react";
+import { EmployeeList } from "@/components/dashboard/employee-list";
+import { getRegistersByUserId } from "@/app/actions/register";
+import { Register } from "@/app/types/register";
 
 export default function DashboardPage() {
     const user = useUser();
-    const app = useStackApp();
+    const [selectedRegister, setSelectedRegister] = useState<Register | null>(null);
+    const [registers, setRegisters] = useState<Register[]>([]);
+
+    useEffect(() => {
+        async function fetchRegisters() {
+            if (!user?.id) return;
+
+            try {
+                const userRegisters = await getRegistersByUserId(parseInt(user.id));
+                setRegisters(userRegisters);
+                if (userRegisters.length > 0) {
+                    setSelectedRegister(userRegisters[0]);
+                }
+            } catch (error) {
+                console.error('Error fetching registers:', error);
+            }
+        }
+
+        fetchRegisters();
+    }, [user?.id]);
 
     return (
-        <div className="min-h-screen bg-muted p-6">
-            <div className="mx-auto max-w-4xl">
-                <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-2xl font-bold">Dashboard</h1>
-                    <Link href="/handler/signout">
-                        <Button variant="outline">
-                            Sign Out
-                        </Button>
-                    </Link>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Welcome</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Hello, {user?.id}</p>
-                            <p className="text-sm text-muted-foreground mt-2">
-                                User ID: {user?.id}
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Account Details</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <p>Status: {user?.id ? 'Active' : 'Not logged in'}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+        <div className="space-y-8">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">
+                        Welcome, {user?.displayName || user?.primaryEmail?.split('@')[0]}
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Manage your attendance registers and employees
+                    </p>
                 </div>
             </div>
+
+            {selectedRegister ? (
+                <EmployeeList
+                    registerId={String(selectedRegister.id)}
+                    registerName={selectedRegister.description || 'Untitled Register'}
+                />
+            ) : (
+                <div className="text-center text-muted-foreground py-8">
+                    Select a register from the sidebar to view employees
+                </div>
+            )}
         </div>
     );
 } 
