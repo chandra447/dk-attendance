@@ -17,20 +17,28 @@ import { EditEmployeeDialog } from "./edit-employee-dialog";
 interface EmployeeCardProps {
     employee: Employee;
     date: Date;
+    isLoading?: boolean;
+    presentRecord: EmployeePresent | null;
+    logs: AttendanceLog[];
     onStatusChange: () => void;
+    onLoadingChange: (isLoading: boolean) => void;
+    onUpdateStatus: (presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => void;
 }
 
 export function EmployeeCard({
     employee,
     date,
-    onStatusChange
+    isLoading = false,
+    presentRecord,
+    logs,
+    onStatusChange,
+    onLoadingChange,
+    onUpdateStatus
 }: EmployeeCardProps) {
-    const [isLoading, setIsLoading] = useState(false);
-    const [presentRecord, setPresentRecord] = useState<EmployeePresent | null>(null);
-    const [lastLog, setLastLog] = useState<AttendanceLog | null>(null);
     const [showLogDrawer, setShowLogDrawer] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [clockOutDuration, setClockOutDuration] = useState<string>("00:00:00");
+    const lastLog = logs.length > 0 ? logs[0] : null;
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
@@ -67,87 +75,59 @@ export function EmployeeCard({
         };
     }, [lastLog]);
 
-    useEffect(() => {
-        async function fetchStatus() {
-            try {
-                // Check present record for today without creating one
-                const presentResult = await checkEmployeePresent(employee.id, date);
-                if ('data' in presentResult) {
-                    setPresentRecord(presentResult.data);
-
-                    // Get attendance logs for today
-                    const logsResult = await getEmployeeAttendanceLogs(employee.id, date);
-                    if ('data' in logsResult && logsResult.data && logsResult.data.length > 0) {
-                        // Sort logs by creation time to get the latest one
-                        const sortedLogs = [...logsResult.data].sort((a, b) => {
-                            const dateA = a.clockOut || a.clockIn;
-                            const dateB = b.clockOut || b.clockIn;
-                            return new Date(dateB).getTime() - new Date(dateA).getTime();
-                        });
-                        setLastLog(sortedLogs[0]); // Get the most recent log
-                    } else {
-                        setLastLog(null);
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching status:', error);
-            }
-        }
-        fetchStatus();
-    }, [employee.id, date]);
-
     const handlePresent = async () => {
-        setIsLoading(true);
+        onLoadingChange(true);
         try {
             const result = await markEmployeePresent(employee.id, date);
-            if ('data' in result) {
-                setPresentRecord(result.data);
+            if ('data' in result && result.data) {
+                const newPresentRecord = result.data;
+                onUpdateStatus(newPresentRecord, logs);
                 onStatusChange();
             }
         } catch (error) {
             console.error('Error marking present:', error);
         } finally {
-            setIsLoading(false);
+            onLoadingChange(false);
         }
     };
 
     const handleClockOut = async () => {
         if (!presentRecord) return;
-        setIsLoading(true);
+        onLoadingChange(true);
         try {
             const result = await clockOutEmployee(employee.id, presentRecord.id);
-            if ('data' in result) {
-                setLastLog(result.data);
+            if ('data' in result && result.data) {
+                const newLogs = [result.data, ...logs];
+                onUpdateStatus(presentRecord, newLogs);
                 onStatusChange();
             }
         } catch (error) {
             console.error('Error clocking out:', error);
         } finally {
-            setIsLoading(false);
+            onLoadingChange(false);
         }
     };
 
     const handleClockIn = async () => {
         if (!presentRecord) return;
-        setIsLoading(true);
+        onLoadingChange(true);
         try {
             const result = await clockInEmployee(employee.id, presentRecord.id);
-            if ('data' in result) {
-                setLastLog(result.data);
+            if ('data' in result && result.data) {
+                const newLogs = [result.data, ...logs];
+                onUpdateStatus(presentRecord, newLogs);
                 onStatusChange();
             }
         } catch (error) {
             console.error('Error clocking in:', error);
         } finally {
-            setIsLoading(false);
+            onLoadingChange(false);
         }
     };
 
     // Determine button states based on present record and last log
     const shouldEnableClockIn = presentRecord && lastLog?.status === 'clock-out';
-
-    const shouldEnableClockOut = presentRecord &&
-        (!lastLog || lastLog.status === 'clock-in');
+    const shouldEnableClockOut = presentRecord && (!lastLog || lastLog.status === 'clock-in');
 
     return (
         <Card className="relative">
@@ -204,7 +184,12 @@ export function EmployeeCard({
                             className="rounded-full"
                             size="sm"
                         >
-                            {presentRecord ? "Present" : "Mark Present"}
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    <span>Loading...</span>
+                                </div>
+                            ) : presentRecord ? "Present" : "Mark Present"}
                         </Button>
                         <div className="flex flex-col gap-2">
                             <Button
@@ -212,14 +197,18 @@ export function EmployeeCard({
                                 disabled={isLoading || !shouldEnableClockIn}
                                 variant="outline"
                             >
-                                Clock In
+                                {isLoading && shouldEnableClockIn ? (
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                ) : "Clock In"}
                             </Button>
                             <Button
                                 onClick={handleClockOut}
                                 disabled={isLoading || !shouldEnableClockOut}
                                 variant="outline"
                             >
-                                Clock Out
+                                {isLoading && shouldEnableClockOut ? (
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                ) : "Clock Out"}
                             </Button>
                         </div>
                     </div>
@@ -232,6 +221,7 @@ export function EmployeeCard({
                 open={showLogDrawer}
                 onOpenChange={setShowLogDrawer}
                 presentRecord={presentRecord}
+                logs={logs}
             />
 
             <EditEmployeeDialog

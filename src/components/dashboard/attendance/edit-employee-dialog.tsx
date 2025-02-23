@@ -42,6 +42,8 @@ export function EditEmployeeDialog({
         department: '',
         baseSalary: '',
         passcode: '',
+        startTime: '09:00',
+        endTime: '17:00',
     });
 
     useEffect(() => {
@@ -52,6 +54,8 @@ export function EditEmployeeDialog({
                 department: employee.department,
                 baseSalary: employee.baseSalary,
                 passcode: employee.passcode || '',
+                startTime: employee.startTime || '09:00',
+                endTime: employee.endTime || '17:00',
             });
         }
     }, [employee]);
@@ -71,6 +75,8 @@ export function EditEmployeeDialog({
                 id: employee.id,
                 ...formData,
                 baseSalary: parseFloat(formData.baseSalary),
+                startTime: formData.startTime,
+                endTime: formData.endTime,
             });
 
             if ('data' in result) {
@@ -172,6 +178,32 @@ export function EditEmployeeDialog({
                                 onChange={(e) => setFormData(prev => ({ ...prev, baseSalary: e.target.value }))}
                                 required
                             />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="startTime">
+                                    Start Time
+                                </Label>
+                                <Input
+                                    id="startTime"
+                                    type="time"
+                                    value={formData.startTime}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="endTime">
+                                    End Time
+                                </Label>
+                                <Input
+                                    id="endTime"
+                                    type="time"
+                                    value={formData.endTime}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                                    required
+                                />
+                            </div>
                         </div>
                     </div>
                     <Button

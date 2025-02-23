@@ -26,11 +26,12 @@ import { createEmployee } from "@/app/actions/register";
 interface CreateEmployeeDialogProps {
     registerId: string;
     registerName?: string;
+    onEmployeeUpdate: () => void;
 }
 
 const POSITIONS = ["employee", "supervisor"] as const;
 
-export function CreateEmployeeDialog({ registerId, registerName }: CreateEmployeeDialogProps) {
+export function CreateEmployeeDialog({ registerId, registerName, onEmployeeUpdate }: CreateEmployeeDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -38,6 +39,8 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
         position: 'employee' as typeof POSITIONS[number],
         baseSalary: '',
         passcode: '',
+        startTime: '09:00',
+        endTime: '17:00',
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -49,21 +52,27 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
 
         setIsLoading(true);
         try {
-            await createEmployee({
+            const result = await createEmployee({
                 ...formData,
                 department: 'default', // Set a default department
                 baseSalary: parseFloat(formData.baseSalary),
                 registerId: parseInt(registerId),
+                startTime: formData.startTime,
+                endTime: formData.endTime,
             });
 
-            setFormData({
-                name: '',
-                position: 'employee',
-                baseSalary: '',
-                passcode: '',
-            });
-            setOpen(false);
-            window.location.reload(); // Refresh to show new employee
+            if ('data' in result) {
+                onEmployeeUpdate(); // This will trigger a local state update in the parent
+                setFormData({
+                    name: '',
+                    position: 'employee',
+                    baseSalary: '',
+                    passcode: '',
+                    startTime: '09:00',
+                    endTime: '17:00',
+                });
+                setOpen(false);
+            }
         } catch (error) {
             console.error('Error creating employee:', error);
         } finally {
@@ -150,6 +159,30 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
                                 required
                                 disabled={!registerName}
                             />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="startTime">Start Time</Label>
+                                <Input
+                                    id="startTime"
+                                    type="time"
+                                    value={formData.startTime}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                                    required
+                                    disabled={!registerName}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="endTime">End Time</Label>
+                                <Input
+                                    id="endTime"
+                                    type="time"
+                                    value={formData.endTime}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                                    required
+                                    disabled={!registerName}
+                                />
+                            </div>
                         </div>
                     </div>
                     <DialogFooter className="mt-6">

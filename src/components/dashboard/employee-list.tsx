@@ -9,16 +9,18 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getRegisterEmployees, getEmployeeAttendanceLogs } from "@/app/actions/register";
+import { getRegisterEmployees, getEmployeeAttendanceLogs, checkEmployeePresent } from "@/app/actions/register";
 import { CreateEmployeeDialog } from "@/components/dashboard/create-employee-dialog";
 import { EmployeeCard } from "./attendance/employee-card";
-import { Employee, EmployeeListProps, AttendanceLog } from "./types/attendance-types";
+import { Employee, EmployeeListProps, AttendanceLog, EmployeePresent } from "./types/attendance-types";
 
 export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [logs, setLogs] = useState<AttendanceLog[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [employeeLogs, setEmployeeLogs] = useState<Record<number, AttendanceLog[]>>({});
+    const [employeePresentRecords, setEmployeePresentRecords] = useState<Record<number, EmployeePresent | null>>({});
+    const [loadingEmployeeIds, setLoadingEmployeeIds] = useState<Set<number>>(new Set());
     const [date, setDate] = useState<Date>(new Date());
+    const [isLoading, setIsLoading] = useState(true);
 
     const fetchEmployeesAndLogs = async () => {
         if (!registerId) return;
@@ -27,22 +29,60 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
             setIsLoading(true);
             const employeeResult = await getRegisterEmployees(parseInt(registerId));
             if ('data' in employeeResult) {
-                setEmployees(employeeResult.data as Employee[]);
-            }
+                const fetchedEmployees = employeeResult.data as Employee[];
+                setEmployees(fetchedEmployees);
 
-            const logResult = await getEmployeeAttendanceLogs(parseInt(registerId), date);
-            if ('data' in logResult && logResult.data) {
-                setLogs(logResult.data.map(log => ({
-                    ...log,
-                    clockIn: log.clockIn ? new Date(log.clockIn) : null,
-                    clockOut: log.clockOut ? new Date(log.clockOut) : null
-                })));
+                // Fetch logs and present records for each employee
+                const logsPromises = fetchedEmployees.map(async (employee) => {
+                    const [presentResult, logsResult] = await Promise.all([
+                        checkEmployeePresent(employee.id, date),
+                        getEmployeeAttendanceLogs(employee.id, date)
+                    ]);
+
+                    return {
+                        employeeId: employee.id,
+                        presentRecord: 'data' in presentResult ? presentResult.data : null,
+                        logs: 'data' in logsResult ? logsResult.data : []
+                    };
+                });
+
+                const results = await Promise.all(logsPromises);
+
+                const newLogs: Record<number, AttendanceLog[]> = {};
+                const newPresentRecords: Record<number, EmployeePresent | null> = {};
+
+                results.forEach(({ employeeId, presentRecord, logs }) => {
+                    newLogs[employeeId] = logs.map(log => ({
+                        ...log,
+                        clockIn: log.clockIn ? new Date(log.clockIn) : null,
+                        clockOut: log.clockOut ? new Date(log.clockOut) : null
+                    }));
+                    newPresentRecords[employeeId] = presentRecord;
+                });
+
+                setEmployeeLogs(newLogs);
+                setEmployeePresentRecords(newPresentRecords);
             }
         } catch (error) {
             console.error('Error fetching employees or logs:', error);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleEmployeeUpdate = () => {
+        fetchEmployeesAndLogs();
+    };
+
+    const updateEmployeeStatus = async (employeeId: number, presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => {
+        setEmployeePresentRecords(prev => ({
+            ...prev,
+            [employeeId]: presentRecord
+        }));
+        setEmployeeLogs(prev => ({
+            ...prev,
+            [employeeId]: logs
+        }));
     };
 
     useEffect(() => {
@@ -67,7 +107,11 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
                         Get started by adding employees to {registerName}
                     </p>
                 </div>
-                <CreateEmployeeDialog registerId={registerId} registerName={registerName} />
+                <CreateEmployeeDialog
+                    registerId={registerId}
+                    registerName={registerName}
+                    onEmployeeUpdate={handleEmployeeUpdate}
+                />
             </div>
         );
     }
@@ -104,7 +148,11 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
                             />
                         </PopoverContent>
                     </Popover>
-                    <CreateEmployeeDialog registerId={registerId} registerName={registerName} />
+                    <CreateEmployeeDialog
+                        registerId={registerId}
+                        registerName={registerName}
+                        onEmployeeUpdate={handleEmployeeUpdate}
+                    />
                 </div>
             </div>
 
@@ -114,8 +162,23 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
                         key={employee.id}
                         employee={employee}
                         date={date}
-                        onStatusChange={() => {
-                            fetchEmployeesAndLogs();
+                        isLoading={loadingEmployeeIds.has(employee.id)}
+                        presentRecord={employeePresentRecords[employee.id]}
+                        logs={employeeLogs[employee.id] || []}
+                        onStatusChange={handleEmployeeUpdate}
+                        onLoadingChange={(isLoading) => {
+                            setLoadingEmployeeIds(prev => {
+                                const newSet = new Set(prev);
+                                if (isLoading) {
+                                    newSet.add(employee.id);
+                                } else {
+                                    newSet.delete(employee.id);
+                                }
+                                return newSet;
+                            });
+                        }}
+                        onUpdateStatus={(presentRecord, logs) => {
+                            updateEmployeeStatus(employee.id, presentRecord, logs);
                         }}
                     />
                 ))}

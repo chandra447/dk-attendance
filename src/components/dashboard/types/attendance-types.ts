@@ -5,6 +5,8 @@ export interface Employee {
     department: string;
     baseSalary: string;
     passcode?: string | null;
+    startTime: string;
+    endTime: string;
 }
 
 export interface EmployeeListProps {
