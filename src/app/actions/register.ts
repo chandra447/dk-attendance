@@ -3,8 +3,8 @@
 import { findUserByEmail, createUser, findRegistersByUserId, createNewRegister } from '@/app/db';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/app/db/config';
-import { employees, registerEmployees, registers, attendanceLogger, employeePresent } from "@/app/db/schema";
-import { eq, and, desc, gte, lte, sql, or } from "drizzle-orm";
+import { employees, registerEmployees, registers, attendanceLogger, employeePresent, salaryAdvances } from "@/app/db/schema";
+import { eq, and, desc, gte, lte, sql, or, inArray } from "drizzle-orm";
 import { startOfDay, endOfDay } from "date-fns";
 
 interface SyncUserParams {
@@ -301,5 +301,56 @@ export async function clockInEmployee(employeeId: number, employeePresentId: num
     } catch (error) {
         console.error("Error clocking in employee:", error);
         return { error: "Failed to clock in employee" };
+    }
+}
+
+export async function deleteRegister(registerId: number) {
+    try {
+        // First get all employees associated with this register
+        const registerEmployeesList = await db
+            .select({ employeeId: registerEmployees.employeeId })
+            .from(registerEmployees)
+            .where(eq(registerEmployees.registerId, registerId));
+
+        const employeeIds = registerEmployeesList.map(re => re.employeeId);
+
+        if (employeeIds.length > 0) {
+            // Delete all salary advances for these employees
+            await db
+                .delete(salaryAdvances)
+                .where(inArray(salaryAdvances.employeeId, employeeIds));
+
+            // Delete all attendance logs for these employees
+            await db
+                .delete(attendanceLogger)
+                .where(inArray(attendanceLogger.employeeId, employeeIds));
+
+            // Delete all employee present records for these employees
+            await db
+                .delete(employeePresent)
+                .where(inArray(employeePresent.employeeId, employeeIds));
+
+            // Delete the register-employee associations
+            await db
+                .delete(registerEmployees)
+                .where(eq(registerEmployees.registerId, registerId));
+
+            // Delete the employees
+            await db
+                .delete(employees)
+                .where(inArray(employees.id, employeeIds));
+        }
+
+        // Finally delete the register itself
+        const [deletedRegister] = await db
+            .delete(registers)
+            .where(eq(registers.id, registerId))
+            .returning();
+
+        revalidatePath('/dashboard');
+        return { data: deletedRegister };
+    } catch (error) {
+        console.error("Error deleting register:", error);
+        return { error: "Failed to delete register" };
     }
 } 

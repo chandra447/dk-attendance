@@ -70,7 +70,7 @@ export function RegisterContent({ registerId, registerName }: RegisterContentPro
                             <TableCell className="text-right">
                                 {employee.baseSalary.toLocaleString('en-US', {
                                     style: 'currency',
-                                    currency: 'USD'
+                                    currency: 'INR'
                                 })}
                             </TableCell>
                         </TableRow>

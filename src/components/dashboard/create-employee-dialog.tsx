@@ -36,7 +36,6 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
     const [formData, setFormData] = useState({
         name: '',
         position: 'employee' as typeof POSITIONS[number],
-        department: '',
         baseSalary: '',
         passcode: '',
     });
@@ -52,6 +51,7 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
         try {
             await createEmployee({
                 ...formData,
+                department: 'default', // Set a default department
                 baseSalary: parseFloat(formData.baseSalary),
                 registerId: parseInt(registerId),
             });
@@ -59,7 +59,6 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
             setFormData({
                 name: '',
                 position: 'employee',
-                department: '',
                 baseSalary: '',
                 passcode: '',
             });
@@ -73,28 +72,24 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={setOpen} >
             <DialogTrigger asChild>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Employee
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-lg sm:rounded-2xl p-6">
+            <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] w-[90%] sm:w-full sm:max-w-[425px] max-h-[85vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader className="space-y-2 text-center">
                     <DialogTitle>Add New Employee</DialogTitle>
                     <DialogDescription>
-                        {registerName
-                            ? `Add a new employee to ${registerName}`
-                            : "Please select a register to add employees"}
+                        Add a new employee to {registerName || 'your register'}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="mt-4">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">
-                                Name
-                            </Label>
+                            <Label htmlFor="name">Name</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
@@ -104,9 +99,7 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="position">
-                                Position
-                            </Label>
+                            <Label htmlFor="position">Position</Label>
                             <Select
                                 value={formData.position}
                                 onValueChange={(value: typeof POSITIONS[number]) =>
@@ -128,9 +121,7 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
                         </div>
                         {formData.position === 'supervisor' && (
                             <div className="space-y-2">
-                                <Label htmlFor="passcode">
-                                    Passcode
-                                </Label>
+                                <Label htmlFor="passcode">Passcode</Label>
                                 <Input
                                     id="passcode"
                                     type="number"
@@ -150,21 +141,7 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
                             </div>
                         )}
                         <div className="space-y-2">
-                            <Label htmlFor="department">
-                                Department
-                            </Label>
-                            <Input
-                                id="department"
-                                value={formData.department}
-                                onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                                required
-                                disabled={!registerName}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="baseSalary">
-                                Base Salary
-                            </Label>
+                            <Label htmlFor="baseSalary">Base Salary</Label>
                             <Input
                                 id="baseSalary"
                                 type="number"
@@ -175,13 +152,15 @@ export function CreateEmployeeDialog({ registerId, registerName }: CreateEmploye
                             />
                         </div>
                     </div>
-                    <Button
-                        type="submit"
-                        disabled={isLoading || !registerName}
-                        className="w-full my-4"
-                    >
-                        {isLoading ? "Adding..." : "Add Employee"}
-                    </Button>
+                    <DialogFooter className="mt-6">
+                        <Button
+                            type="submit"
+                            disabled={isLoading || !registerName}
+                            className="w-full"
+                        >
+                            {isLoading ? "Adding..." : "Add Employee"}
+                        </Button>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>

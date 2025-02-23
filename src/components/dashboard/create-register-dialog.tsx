@@ -39,6 +39,7 @@ export function CreateRegisterDialog({ isLoading, onCreateRegister }: CreateRegi
                     size="icon"
                     disabled={isLoading}
                     title="Create new register"
+                    data-create-register
                 >
                     <Plus className="h-4 w-4" />
                 </Button>

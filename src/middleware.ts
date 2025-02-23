@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // If the user is not logged in and trying to access protected routes
-    if (!user && request.nextUrl.pathname !== '/auth') {
+    if (!user && (request.nextUrl.pathname === '/dashboard' || request.nextUrl.pathname.startsWith('/dashboard/'))) {
         console.log('User not logged in. Redirecting to auth page');
         return NextResponse.redirect(new URL('/auth', request.url));
     }
@@ -29,5 +29,5 @@ export async function middleware(request: NextRequest) {
 
 // Configure the paths that should be checked by the middleware
 export const config = {
-    matcher: ['/', '/dashboard', '/auth']
+    matcher: ['/', '/dashboard', '/dashboard/:path*', '/auth']
 }; 
