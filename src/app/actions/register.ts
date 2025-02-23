@@ -83,6 +83,8 @@ export async function createEmployee(data: {
     baseSalary: number;
     registerId: number;
     passcode?: string;
+    startTime: string;
+    endTime: string;
 }) {
     try {
         // First create the employee
@@ -92,6 +94,8 @@ export async function createEmployee(data: {
             department: data.department,
             baseSalary: data.baseSalary.toString(), // Convert to string for database
             passcode: data.position === 'supervisor' ? data.passcode : null,
+            startTime: data.startTime,
+            endTime: data.endTime,
         }).returning();
 
         // Then create the register-employee association
@@ -115,6 +119,8 @@ export async function updateEmployee(data: {
     department: string;
     baseSalary: number;
     passcode?: string;
+    startTime: string;
+    endTime: string;
 }) {
     try {
         const [updated] = await db
@@ -126,6 +132,8 @@ export async function updateEmployee(data: {
                 baseSalary: data.baseSalary.toString(),
                 updatedAt: new Date(),
                 passcode: data.position === 'supervisor' ? data.passcode : null,
+                startTime: data.startTime,
+                endTime: data.endTime,
             })
             .where(eq(employees.id, data.id))
             .returning();

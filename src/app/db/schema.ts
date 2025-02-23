@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, integer, decimal, date, text, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, decimal, date, text, primaryKey, uniqueIndex, time } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -23,8 +23,10 @@ export const employees = pgTable("employees", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     position: varchar("position", { length: 255 }).notNull(),
-    department: varchar("department", { length: 255 }).notNull(),
+    department: varchar("department", { length: 255 }),
     baseSalary: decimal("base_salary", { precision: 10, scale: 2 }).notNull(),
+    startTime: time("start_time").notNull(),
+    endTime: time("end_time").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     passcode: varchar("passcode", { length: 5 })
