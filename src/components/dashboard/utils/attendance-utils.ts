@@ -1,38 +1,16 @@
 import { differenceInHours, differenceInMinutes } from "date-fns";
 
 export function formatDuration(clockIn: Date | null, clockOut: Date | null): string {
-    // If there's no clock-out time, calculate duration from clock-in to current time
-    if (clockIn && !clockOut) {
-        const now = new Date();
-        const hours = differenceInHours(now, clockIn);
-        const minutes = differenceInMinutes(now, clockIn) % 60;
-        return formatTime(hours, minutes);
-    }
+    if (!clockIn || !clockOut) return "00:00";
 
-    // If there's only clock-out time (employee is out), calculate duration from clock-out to current time
-    if (!clockIn && clockOut) {
-        const now = new Date();
-        const hours = differenceInHours(now, clockOut);
-        const minutes = differenceInMinutes(now, clockOut) % 60;
-        return `Out for ${formatTime(hours, minutes)}`;
-    }
+    const clockInTime = new Date(clockIn);
+    const clockOutTime = new Date(clockOut);
 
-    // If both times exist, calculate duration between them
-    if (clockIn && clockOut) {
-        // Calculate from clockIn to clockOut (not the other way around)
-        const hours = differenceInHours(clockOut, clockIn);
-        const minutes = differenceInMinutes(clockOut, clockIn) % 60;
-        if (hours < 0 || minutes < 0) {
-            // If we still get negative values, swap the order
-            const positiveHours = Math.abs(hours);
-            const positiveMinutes = Math.abs(minutes);
-            return formatTime(positiveHours, positiveMinutes);
-        }
-        return formatTime(hours, minutes);
-    }
+    const diffInMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60));
+    const hours = Math.floor(Math.abs(diffInMinutes) / 60);
+    const minutes = Math.abs(diffInMinutes) % 60;
 
-    // If no times exist
-    return "No duration";
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 // Helper function to format hours and minutes consistently

@@ -27,17 +27,22 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
 
         try {
             setIsLoading(true);
+            //get the list of all the employees belong to the register
             const employeeResult = await getRegisterEmployees(parseInt(registerId));
+
             if ('data' in employeeResult) {
                 const fetchedEmployees = employeeResult.data as Employee[];
                 setEmployees(fetchedEmployees);
 
                 // Fetch logs and present records for each employee
                 const logsPromises = fetchedEmployees.map(async (employee) => {
+
+
                     const [presentResult, logsResult] = await Promise.all([
                         checkEmployeePresent(employee.id, date),
                         getEmployeeAttendanceLogs(employee.id, date)
                     ]);
+
 
                     return {
                         employeeId: employee.id,
@@ -47,18 +52,38 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
                 });
 
                 const results = await Promise.all(logsPromises);
+                console.log('All results from Promise.all:', results);
 
                 const newLogs: Record<number, AttendanceLog[]> = {};
                 const newPresentRecords: Record<number, EmployeePresent | null> = {};
 
-                results.forEach(({ employeeId, presentRecord, logs }) => {
-                    newLogs[employeeId] = logs.map(log => ({
-                        ...log,
-                        clockIn: log.clockIn ? new Date(log.clockIn) : null,
-                        clockOut: log.clockOut ? new Date(log.clockOut) : null
-                    }));
-                    newPresentRecords[employeeId] = presentRecord;
+                results.forEach(({ employeeId, presentRecord, logs = [] }) => {
+                    console.log(`Processing logs for employee ${employeeId}:`, logs);
+
+                    newLogs[employeeId] = logs.map(log => {
+                        console.log('Processing log:', log);
+                        return {
+                            ...log,
+                            clockIn: log.clockIn ? new Date(log.clockIn) : null,
+                            clockOut: log.clockOut ? new Date(log.clockOut) : null
+                        };
+                    });
+
+                    if (presentRecord) {
+                        console.log(`Processing present record for employee ${employeeId}:`, presentRecord);
+                        newPresentRecords[employeeId] = {
+                            ...presentRecord,
+                            date: new Date(presentRecord.date),
+                            createdAt: new Date(presentRecord.createdAt),
+                            updatedAt: new Date(presentRecord.updatedAt)
+                        };
+                    } else {
+                        newPresentRecords[employeeId] = null;
+                    }
                 });
+
+                console.log('Final processed logs:', newLogs);
+                console.log('Final processed present records:', newPresentRecords);
 
                 setEmployeeLogs(newLogs);
                 setEmployeePresentRecords(newPresentRecords);
@@ -74,14 +99,27 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
         fetchEmployeesAndLogs();
     };
 
-    const updateEmployeeStatus = async (employeeId: number, presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => {
+    const updateEmployeeStatus = (employeeId: number, presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => {
+        console.log(`Updating status for employee ${employeeId}:`);
+        console.log('Present Record:', presentRecord);
+        console.log('Updated Logs:', logs);
+
         setEmployeePresentRecords(prev => ({
             ...prev,
-            [employeeId]: presentRecord
+            [employeeId]: presentRecord && {
+                ...presentRecord,
+                date: new Date(presentRecord.date),
+                createdAt: new Date(presentRecord.createdAt),
+                updatedAt: new Date(presentRecord.updatedAt)
+            }
         }));
         setEmployeeLogs(prev => ({
             ...prev,
-            [employeeId]: logs
+            [employeeId]: logs.map(log => ({
+                ...log,
+                clockIn: log.clockIn ? new Date(log.clockIn) : null,
+                clockOut: log.clockOut ? new Date(log.clockOut) : null
+            }))
         }));
     };
 

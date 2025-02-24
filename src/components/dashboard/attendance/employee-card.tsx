@@ -80,7 +80,12 @@ export function EmployeeCard({
         try {
             const result = await markEmployeePresent(employee.id, date);
             if ('data' in result && result.data) {
-                const newPresentRecord = result.data;
+                const newPresentRecord = {
+                    ...result.data,
+                    date: new Date(result.data.date),
+                    createdAt: new Date(result.data.createdAt),
+                    updatedAt: new Date(result.data.updatedAt)
+                };
                 onUpdateStatus(newPresentRecord, logs);
                 onStatusChange();
             }
@@ -93,13 +98,27 @@ export function EmployeeCard({
 
     const handleClockOut = async () => {
         if (!presentRecord) return;
+        console.log('Starting clock-out operation for:', employee.name);
+        console.log('Using present record:', presentRecord);
+        console.log('Current logs before clock-out:', logs);
+
         onLoadingChange(true);
         try {
             const result = await clockOutEmployee(employee.id, presentRecord.id);
+            console.log('Clock-out API response:', result);
+
             if ('data' in result && result.data) {
-                const newLogs = [result.data, ...logs];
+                const newLog = {
+                    ...result.data,
+                    clockIn: result.data.clockIn ? new Date(result.data.clockIn) : null,
+                    clockOut: result.data.clockOut ? new Date(result.data.clockOut) : null
+                };
+                console.log('Processed new log:', newLog);
+
+                const newLogs = [newLog, ...logs];
+                console.log('Updated logs array:', newLogs);
+
                 onUpdateStatus(presentRecord, newLogs);
-                onStatusChange();
             }
         } catch (error) {
             console.error('Error clocking out:', error);
@@ -110,13 +129,27 @@ export function EmployeeCard({
 
     const handleClockIn = async () => {
         if (!presentRecord) return;
+        console.log('Starting clock-in operation for:', employee.name);
+        console.log('Using present record:', presentRecord);
+        console.log('Current logs before clock-in:', logs);
+
         onLoadingChange(true);
         try {
             const result = await clockInEmployee(employee.id, presentRecord.id);
+            console.log('Clock-in API response:', result);
+
             if ('data' in result && result.data) {
-                const newLogs = [result.data, ...logs];
+                const newLog = {
+                    ...result.data,
+                    clockIn: result.data.clockIn ? new Date(result.data.clockIn) : null,
+                    clockOut: result.data.clockOut ? new Date(result.data.clockOut) : null
+                };
+                console.log('Processed new log:', newLog);
+
+                const newLogs = [newLog, ...logs];
+                console.log('Updated logs array:', newLogs);
+
                 onUpdateStatus(presentRecord, newLogs);
-                onStatusChange();
             }
         } catch (error) {
             console.error('Error clocking in:', error);

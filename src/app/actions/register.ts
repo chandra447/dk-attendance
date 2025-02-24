@@ -167,6 +167,7 @@ export async function getEmployeeAttendanceLogs(employeeId: number, date: Date) 
         const startTime = startOfDay(date);
         const endTime = endOfDay(date);
 
+
         const result = await db
             .select({
                 id: attendanceLogger.id,
@@ -176,6 +177,7 @@ export async function getEmployeeAttendanceLogs(employeeId: number, date: Date) 
                 clockOut: attendanceLogger.clockOut,
                 status: attendanceLogger.status,
                 notes: attendanceLogger.notes,
+                createdAt: attendanceLogger.createdAt,
             })
             .from(attendanceLogger)
             .where(
@@ -193,8 +195,9 @@ export async function getEmployeeAttendanceLogs(employeeId: number, date: Date) 
                     )
                 )
             )
-            .orderBy(desc(attendanceLogger.clockOut));
+            .orderBy(desc(attendanceLogger.createdAt));
 
+        console.log('Fetched logs:', result);
         return { data: result };
     } catch (error) {
         console.error("Error fetching attendance logs:", error);
@@ -257,16 +260,21 @@ export async function markEmployeePresent(employeeId: number, date: Date) {
 
 export async function clockOutEmployee(employeeId: number, employeePresentId: number) {
     try {
+        console.log('Creating clock-out log for:', { employeeId, employeePresentId });
+
         // Create a new attendance log entry for clock-out
         const [log] = await db.insert(attendanceLogger).values({
             employeeId,
             employeePresentId,
-            clockOut: new Date(), // Only set clockOut time
-            clockIn: null,        // Leave clockIn as null since they haven't returned yet
+            clockOut: new Date(),
+            clockIn: null,
             status: 'clock-out',
-            notes: null
+            notes: null,
+            createdAt: new Date(),
+            updatedAt: new Date()
         }).returning();
 
+        console.log('Created clock-out log:', log);
         return { data: log };
     } catch (error) {
         console.error("Error clocking out employee:", error);
