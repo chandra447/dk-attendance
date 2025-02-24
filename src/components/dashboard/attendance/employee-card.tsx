@@ -9,10 +9,15 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { markEmployeePresent, checkEmployeePresent, clockInEmployee, clockOutEmployee, getEmployeeAttendanceLogs } from "@/app/actions/register";
+import { markEmployeePresent, checkEmployeePresent, clockInEmployee, clockOutEmployee, getEmployeeAttendanceLogs, markEmployeeAbsent, markEmployeeReturnFromAbsent } from "@/app/actions/register";
 import { Employee, EmployeePresent, AttendanceLog } from "../types/attendance-types";
 import { AttendanceLogDrawer } from "./attendance-log-drawer";
 import { EditEmployeeDialog } from "./edit-employee-dialog";
+import { SalaryAdvanceDialog } from "./salary-advance-dialog";
+import { cn } from "@/lib/utils";
+import { formatMinutes } from "../utils/attendance-utils";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 interface EmployeeCardProps {
     employee: Employee;
@@ -20,9 +25,10 @@ interface EmployeeCardProps {
     isLoading?: boolean;
     presentRecord: EmployeePresent | null;
     logs: AttendanceLog[];
-    onStatusChange: () => void;
+    onStatusChange: (employeeId: number) => void;
     onLoadingChange: (isLoading: boolean) => void;
     onUpdateStatus: (presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => void;
+    registerStartTime: Date | null;
 }
 
 export function EmployeeCard({
@@ -33,12 +39,15 @@ export function EmployeeCard({
     logs,
     onStatusChange,
     onLoadingChange,
-    onUpdateStatus
+    onUpdateStatus,
+    registerStartTime
 }: EmployeeCardProps) {
     const [showLogDrawer, setShowLogDrawer] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showSalaryAdvanceDialog, setShowSalaryAdvanceDialog] = useState(false);
     const [clockOutDuration, setClockOutDuration] = useState<string>("00:00:00");
     const lastLog = logs.length > 0 ? logs[0] : null;
+    const router = useRouter();
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
@@ -75,6 +84,31 @@ export function EmployeeCard({
         };
     }, [lastLog]);
 
+    const calculateTotalDuration = (logs: AttendanceLog[]) => {
+        let totalMinutes = 0;
+
+        logs.forEach(log => {
+            if (log.status === 'clock-in' && log.clockIn && log.clockOut) {
+                // For completed clock-in periods
+                const clockInTime = new Date(log.clockIn);
+                const clockOutTime = new Date(log.clockOut);
+                const diffInMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60));
+                totalMinutes += Math.abs(diffInMinutes);
+            } else if (log.status === 'clock-out' && log.clockOut) {
+                // For ongoing clock-out periods
+                const clockOutTime = new Date(log.clockOut);
+                const now = new Date();
+                const diffInMinutes = Math.floor((now.getTime() - clockOutTime.getTime()) / (1000 * 60));
+                totalMinutes += diffInMinutes;
+            }
+        });
+
+        return totalMinutes;
+    };
+
+    const totalMinutes = calculateTotalDuration(logs);
+    const isOvertime = totalMinutes > employee.durationAllowed;
+
     const handlePresent = async () => {
         onLoadingChange(true);
         try {
@@ -87,7 +121,7 @@ export function EmployeeCard({
                     updatedAt: new Date(result.data.updatedAt)
                 };
                 onUpdateStatus(newPresentRecord, logs);
-                onStatusChange();
+                onStatusChange(employee.id);
             }
         } catch (error) {
             console.error('Error marking present:', error);
@@ -119,9 +153,12 @@ export function EmployeeCard({
                 console.log('Updated logs array:', newLogs);
 
                 onUpdateStatus(presentRecord, newLogs);
+                onStatusChange(employee.id);
+                toast.success("Employee clocked out successfully");
             }
         } catch (error) {
             console.error('Error clocking out:', error);
+            toast.error("Failed to clock out employee");
         } finally {
             onLoadingChange(false);
         }
@@ -139,20 +176,27 @@ export function EmployeeCard({
             console.log('Clock-in API response:', result);
 
             if ('data' in result && result.data) {
-                const newLog = {
-                    ...result.data,
-                    clockIn: result.data.clockIn ? new Date(result.data.clockIn) : null,
-                    clockOut: result.data.clockOut ? new Date(result.data.clockOut) : null
-                };
-                console.log('Processed new log:', newLog);
+                // Find the latest clock-out log and update it with the new clock-in time
+                const updatedLogs = logs.map(log => {
+                    if (log.id === result.data.id) {
+                        return {
+                            ...result.data,
+                            clockIn: result.data.clockIn ? new Date(result.data.clockIn) : null,
+                            clockOut: result.data.clockOut ? new Date(result.data.clockOut) : null,
+                            status: 'clock-in'
+                        };
+                    }
+                    return log;
+                });
 
-                const newLogs = [newLog, ...logs];
-                console.log('Updated logs array:', newLogs);
-
-                onUpdateStatus(presentRecord, newLogs);
+                console.log('Updated logs array:', updatedLogs);
+                onUpdateStatus(presentRecord, updatedLogs);
+                onStatusChange(employee.id);
+                toast.success("Employee clocked in successfully");
             }
         } catch (error) {
             console.error('Error clocking in:', error);
+            toast.error("Failed to clock in employee");
         } finally {
             onLoadingChange(false);
         }
@@ -162,26 +206,110 @@ export function EmployeeCard({
     const shouldEnableClockIn = presentRecord && lastLog?.status === 'clock-out';
     const shouldEnableClockOut = presentRecord && (!lastLog || lastLog.status === 'clock-in');
 
+    const handleUpdateLogs = (updatedLogs: AttendanceLog[]) => {
+        onUpdateStatus(presentRecord, updatedLogs);
+        onStatusChange(employee.id);
+    };
+
+    const handleAbsent = async () => {
+        if (!presentRecord) return;
+        onLoadingChange(true);
+        try {
+            const result = await markEmployeeAbsent(employee.id, presentRecord.id, new Date());
+            if (result.error) {
+                toast.error(result.error);
+                return;
+            }
+            if ('data' in result && result.data) {
+                const { presentRecord: updatedPresent } = result.data;
+                // Update the present record with the new status and absentTimestamp
+                const newPresentRecord = {
+                    ...updatedPresent,
+                    date: new Date(updatedPresent.date),
+                    createdAt: new Date(updatedPresent.createdAt),
+                    updatedAt: new Date(updatedPresent.updatedAt),
+                    absentTimestamp: updatedPresent.absentTimestamp ? new Date(updatedPresent.absentTimestamp) : null
+                };
+                // No log is created when marking absent
+                onUpdateStatus(newPresentRecord, logs);
+                onStatusChange(employee.id);
+                toast.success("Employee marked as absent");
+            }
+        } catch (error) {
+            console.error("Error marking employee as absent:", error);
+            toast.error("Failed to mark employee as absent");
+        } finally {
+            onLoadingChange(false);
+        }
+    };
+
+    const handleReturn = async () => {
+        if (!presentRecord) return;
+        onLoadingChange(true);
+        try {
+            const result = await markEmployeeReturnFromAbsent(employee.id, presentRecord.id);
+            if (result.error) {
+                toast.error(result.error);
+                return;
+            }
+            if ('data' in result && result.data) {
+                const { presentRecord: updatedPresent, log: newLog } = result.data;
+                // Update the present record with the new status
+                const newPresentRecord = {
+                    ...updatedPresent,
+                    date: new Date(updatedPresent.date),
+                    createdAt: new Date(updatedPresent.createdAt),
+                    updatedAt: new Date(updatedPresent.updatedAt)
+                };
+                // Add the new log to the logs array
+                const newLogs = [
+                    {
+                        ...newLog,
+                        clockIn: newLog.clockIn ? new Date(newLog.clockIn) : null,
+                        clockOut: newLog.clockOut ? new Date(newLog.clockOut) : null
+                    },
+                    ...logs
+                ];
+                onUpdateStatus(newPresentRecord, newLogs);
+                onStatusChange(employee.id);
+                toast.success("Employee marked as returned");
+            }
+        } catch (error) {
+            console.error("Error marking employee return:", error);
+            toast.error("Failed to mark employee return");
+        } finally {
+            onLoadingChange(false);
+        }
+    };
+
     return (
-        <Card className="relative">
+        <Card className="relative w-full">
             {lastLog && lastLog.status === 'clock-out' && (
                 <div className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
             )}
 
             <CardContent className="pt-6">
-                <div className="absolute right-12 top-4">
+                <div className="absolute right-4 top-4">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent
+                            align="end"
+                            side="bottom"
+                            className="w-[160px]"
+                            sideOffset={4}
+                        >
                             <DropdownMenuItem onClick={() => setShowLogDrawer(true)}>
                                 View Logs
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
                                 Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setShowSalaryAdvanceDialog(true)}>
+                                Salary Advance
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -190,45 +318,82 @@ export function EmployeeCard({
                 <div className="space-y-4">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{employee.name}</h3>
+                            <h3 className={cn(
+                                "font-semibold text-lg",
+                                isOvertime && "text-red-500"
+                            )}>
+                                {employee.name}
+                            </h3>
                             {presentRecord ? (
                                 <UserRoundCheck className="h-5 w-5 text-green-500" />
                             ) : (
                                 <UserRoundX className="h-5 w-5 text-red-500" />
                             )}
                         </div>
-                        {presentRecord && (
-                            <div className="text-sm text-muted-foreground">
-                                Present since {format(presentRecord.createdAt, "h:mm a")}
+                        <div className="text-sm text-muted-foreground h-5">
+                            {presentRecord ? (
+                                `Present since ${format(presentRecord.createdAt, "h:mm a")}`
+                            ) : (
+                                "Not present"
+                            )}
+                        </div>
+                        {lastLog?.status === 'clock-out' ? (
+                            <div className="text-sm font-mono text-red-500">
+                                Clocked out for: {clockOutDuration}
                             </div>
-                        )}
-                        {lastLog && lastLog.status === 'clock-out' && (
-                            <div className="text-sm font-mono text-muted-foreground">
-                                Out for {clockOutDuration}
+                        ) : (
+                            <div className={cn(
+                                "text-sm font-mono",
+                                isOvertime && "text-red-500"
+                            )}>
+                                Total Duration: {`${Math.floor(Math.abs(totalMinutes) / 60).toString().padStart(2, '0')}:${(Math.abs(totalMinutes) % 60).toString().padStart(2, '0')}`}
                             </div>
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <Button
-                            onClick={handlePresent}
-                            disabled={isLoading || !!presentRecord}
-                            variant={presentRecord ? "secondary" : "default"}
-                            className="rounded-full"
-                            size="sm"
-                        >
-                            {isLoading ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                    <span>Loading...</span>
-                                </div>
-                            ) : presentRecord ? "Present" : "Mark Present"}
-                        </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                onClick={handlePresent}
+                                disabled={isLoading || !!presentRecord}
+                                variant={presentRecord ? "secondary" : "default"}
+                                className="rounded-full"
+                                size="sm"
+                            >
+                                {isLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                        <span>Loading...</span>
+                                    </div>
+                                ) : presentRecord ? "Present" : "Mark Present"}
+                            </Button>
+                            {presentRecord?.status === 'present' && (
+                                <Button
+                                    onClick={handleAbsent}
+                                    variant="destructive"
+                                    size="sm"
+                                    className="rounded-full"
+                                >
+                                    Mark Absent
+                                </Button>
+                            )}
+                            {presentRecord?.status === 'absent' && (
+                                <Button
+                                    onClick={handleReturn}
+                                    variant="default"
+                                    size="sm"
+                                    className="rounded-full"
+                                >
+                                    Mark Return
+                                </Button>
+                            )}
+                        </div>
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={handleClockIn}
                                 disabled={isLoading || !shouldEnableClockIn}
                                 variant="outline"
+                                size="sm"
                             >
                                 {isLoading && shouldEnableClockIn ? (
                                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -238,6 +403,7 @@ export function EmployeeCard({
                                 onClick={handleClockOut}
                                 disabled={isLoading || !shouldEnableClockOut}
                                 variant="outline"
+                                size="sm"
                             >
                                 {isLoading && shouldEnableClockOut ? (
                                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -255,13 +421,22 @@ export function EmployeeCard({
                 onOpenChange={setShowLogDrawer}
                 presentRecord={presentRecord}
                 logs={logs}
+                onUpdateLogs={handleUpdateLogs}
+                onStatusChange={onStatusChange}
+                registerStartTime={registerStartTime}
             />
 
             <EditEmployeeDialog
                 employee={employee}
                 open={showEditDialog}
                 onOpenChange={setShowEditDialog}
-                onEmployeeUpdate={onStatusChange}
+                onEmployeeUpdate={() => onStatusChange(employee.id)}
+            />
+
+            <SalaryAdvanceDialog
+                employee={employee}
+                open={showSalaryAdvanceDialog}
+                onOpenChange={setShowSalaryAdvanceDialog}
             />
         </Card>
     );

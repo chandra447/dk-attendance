@@ -41,6 +41,7 @@ export function CreateEmployeeDialog({ registerId, registerName, onEmployeeUpdat
         passcode: '',
         startTime: '09:00',
         endTime: '17:00',
+        durationAllowed: '120', // 2 hours in minutes
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -54,15 +55,14 @@ export function CreateEmployeeDialog({ registerId, registerName, onEmployeeUpdat
         try {
             const result = await createEmployee({
                 ...formData,
-                department: 'default', // Set a default department
+                department: 'default',
                 baseSalary: parseFloat(formData.baseSalary),
                 registerId: parseInt(registerId),
-                startTime: formData.startTime,
-                endTime: formData.endTime,
+                durationAllowed: parseInt(formData.durationAllowed),
             });
 
             if ('data' in result) {
-                onEmployeeUpdate(); // This will trigger a local state update in the parent
+                onEmployeeUpdate();
                 setFormData({
                     name: '',
                     position: 'employee',
@@ -70,6 +70,7 @@ export function CreateEmployeeDialog({ registerId, registerName, onEmployeeUpdat
                     passcode: '',
                     startTime: '09:00',
                     endTime: '17:00',
+                    durationAllowed: '120',
                 });
                 setOpen(false);
             }
@@ -159,6 +160,22 @@ export function CreateEmployeeDialog({ registerId, registerName, onEmployeeUpdat
                                 required
                                 disabled={!registerName}
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="durationAllowed">Duration Allowed (minutes)</Label>
+                            <Input
+                                id="durationAllowed"
+                                type="number"
+                                value={formData.durationAllowed}
+                                onChange={(e) => setFormData(prev => ({ ...prev, durationAllowed: e.target.value }))}
+                                required
+                                min="0"
+                                step="30"
+                                disabled={!registerName}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Default: 120 minutes (2 hours)
+                            </p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">

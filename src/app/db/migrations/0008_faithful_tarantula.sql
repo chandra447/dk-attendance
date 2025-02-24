@@ -1,0 +1,1 @@
+ALTER TABLE "employee_present" ADD COLUMN "absent_timestamp" timestamp;

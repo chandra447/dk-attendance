@@ -3,7 +3,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Settings, LogOut } from "lucide-react";
+import { BarChart, LogOut, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { UserButton } from "@stackframe/stack";
@@ -134,9 +134,22 @@ function DashboardHeader() {
             </div>
 
             <div className="flex items-center gap-4">
-                <Link href="/dashboard/settings">
-                    <Button variant="ghost" size="icon" title="Account Settings">
-                        <Settings className="h-5 w-5" />
+                <Link href={selectedRegisterId ?
+                    pathname.includes('/reports/') ?
+                        `/dashboard/registers/${selectedRegisterId}` :
+                        `/dashboard/reports/${selectedRegisterId}`
+                    : "#"}>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        title={pathname.includes('/reports/') ? "View Register" : "View Reports"}
+                        disabled={!selectedRegisterId}
+                    >
+                        {pathname.includes('/reports/') ? (
+                            <ClipboardList className="h-5 w-5" />
+                        ) : (
+                            <BarChart className="h-5 w-5" />
+                        )}
                     </Button>
                 </Link>
                 <Separator orientation="vertical" className="h-6" />

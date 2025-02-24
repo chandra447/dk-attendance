@@ -3,8 +3,8 @@
 import { findUserByEmail, createUser, findRegistersByUserId, createNewRegister } from '@/app/db';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/app/db/config';
-import { employees, registerEmployees, registers, attendanceLogger, employeePresent, salaryAdvances } from "@/app/db/schema";
-import { eq, and, desc, gte, lte, sql, or, inArray } from "drizzle-orm";
+import { employees, registerEmployees, registers, attendanceLogger, employeePresent, salaryAdvances, registerLogs } from "@/app/db/schema";
+import { eq, and, desc, gte, lte, sql, or, inArray, isNull } from "drizzle-orm";
 import { startOfDay, endOfDay } from "date-fns";
 
 interface SyncUserParams {
@@ -64,11 +64,16 @@ export async function getRegisterEmployees(registerId: number) {
                 position: employees.position,
                 department: employees.department,
                 baseSalary: employees.baseSalary,
+                startTime: employees.startTime,
+                endTime: employees.endTime,
+                durationAllowed: sql`CAST(${employees.durationAllowed} AS INTEGER)`,
+                passcode: employees.passcode,
             })
             .from(registerEmployees)
             .innerJoin(employees, eq(registerEmployees.employeeId, employees.id))
             .where(eq(registerEmployees.registerId, registerId));
 
+        console.log('Fetched employees with duration:', result);
         return { data: result };
     } catch (error) {
         console.error("Error fetching register employees:", error);
@@ -162,11 +167,10 @@ export async function updateEmployeeStatus(employeeId: number, status: string) {
     }
 }
 
-export async function getEmployeeAttendanceLogs(employeeId: number, date: Date) {
+export async function getEmployeeAttendanceLogs(employeeId: number, startDate: Date, endDate: Date) {
     try {
-        const startTime = startOfDay(date);
-        const endTime = endOfDay(date);
-
+        const startTime = startOfDay(startDate);
+        const endTime = endOfDay(endDate);
 
         const result = await db
             .select({
@@ -197,7 +201,6 @@ export async function getEmployeeAttendanceLogs(employeeId: number, date: Date) 
             )
             .orderBy(desc(attendanceLogger.createdAt));
 
-        console.log('Fetched logs:', result);
         return { data: result };
     } catch (error) {
         console.error("Error fetching attendance logs:", error);
@@ -368,5 +371,371 @@ export async function deleteRegister(registerId: number) {
     } catch (error) {
         console.error("Error deleting register:", error);
         return { error: "Failed to delete register" };
+    }
+}
+
+export async function updateAttendanceLog(data: {
+    id: number;
+    clockIn: Date | null;
+    clockOut: Date | null;
+}) {
+    try {
+        const [updated] = await db
+            .update(attendanceLogger)
+            .set({
+                clockIn: data.clockIn,
+                clockOut: data.clockOut,
+                updatedAt: new Date()
+            })
+            .where(eq(attendanceLogger.id, data.id))
+            .returning();
+
+        return { data: updated };
+    } catch (error) {
+        console.error("Error updating attendance log:", error);
+        return { error: "Failed to update attendance log" };
+    }
+}
+
+export async function deleteAttendanceLog(logId: number) {
+    try {
+        const [deleted] = await db
+            .delete(attendanceLogger)
+            .where(eq(attendanceLogger.id, logId))
+            .returning();
+
+        return { data: deleted };
+    } catch (error) {
+        console.error("Error deleting attendance log:", error);
+        return { error: "Failed to delete attendance log" };
+    }
+}
+
+export async function setRegisterStartTime(registerId: number, startTime: Date) {
+    try {
+        const date = startOfDay(startTime);
+
+        // First update any open attendance logs
+        // Set clock-in time to 10 PM UTC of the previous day for any logs that have clock-out but no clock-in
+        const previousDay = new Date(date);
+        previousDay.setDate(previousDay.getDate() - 1);
+        previousDay.setUTCHours(22, 0, 0, 0); // 10 PM UTC
+
+        await db
+            .update(attendanceLogger)
+            .set({
+                status: 'clock-in',
+                clockIn: sql`${previousDay}`,
+                updatedAt: new Date()
+            })
+            .where(
+                and(
+                    sql`${attendanceLogger.clockOut} < CURRENT_TIMESTAMP`,
+                    eq(attendanceLogger.status, 'clock-out'),
+                    isNull(attendanceLogger.clockIn)
+                )
+            );
+
+        // Check if there's already a log for this date
+        const existingLog = await db
+            .select()
+            .from(registerLogs)
+            .where(
+                and(
+                    eq(registerLogs.registerId, registerId),
+                    eq(registerLogs.date, sql`${date}`)
+                )
+            )
+            .limit(1);
+
+        if (existingLog.length > 0) {
+            // Update existing log
+            const [updated] = await db
+                .update(registerLogs)
+                .set({
+                    startTime,
+                    updatedAt: new Date()
+                })
+                .where(eq(registerLogs.id, existingLog[0].id))
+                .returning();
+            return { data: updated };
+        }
+
+        // Create new log
+        const [newLog] = await db
+            .insert(registerLogs)
+            .values({
+                registerId,
+                date,
+                startTime,
+                status: 'active',
+            })
+            .returning();
+
+        return { data: newLog };
+    } catch (error) {
+        console.error("Error setting register start time:", error);
+        return { error: "Failed to set register start time" };
+    }
+}
+
+export async function getRegisterStartTime(registerId: number, date: Date) {
+    try {
+        const dayStart = startOfDay(date);
+
+        const log = await db
+            .select()
+            .from(registerLogs)
+            .where(
+                and(
+                    eq(registerLogs.registerId, registerId),
+                    eq(registerLogs.date, sql`${dayStart}`)
+                )
+            )
+            .limit(1);
+
+        return { data: log[0] || null };
+    } catch (error) {
+        console.error("Error getting register start time:", error);
+        return { error: "Failed to get register start time" };
+    }
+}
+
+export async function getEmployeeAttendanceLogsInBulk(employeeIds: number[], date: Date) {
+    try {
+        const startTime = startOfDay(date);
+        const endTime = endOfDay(date);
+
+        const result = await db
+            .select({
+                id: attendanceLogger.id,
+                employeeId: attendanceLogger.employeeId,
+                employeePresentId: attendanceLogger.employeePresentId,
+                clockIn: attendanceLogger.clockIn,
+                clockOut: attendanceLogger.clockOut,
+                status: attendanceLogger.status,
+                notes: attendanceLogger.notes,
+                createdAt: attendanceLogger.createdAt,
+            })
+            .from(attendanceLogger)
+            .where(
+                and(
+                    inArray(attendanceLogger.employeeId, employeeIds),
+                    or(
+                        and(
+                            gte(attendanceLogger.clockIn, sql`${startTime}`),
+                            lte(attendanceLogger.clockIn, sql`${endTime}`)
+                        ),
+                        and(
+                            gte(attendanceLogger.clockOut, sql`${startTime}`),
+                            lte(attendanceLogger.clockOut, sql`${endTime}`)
+                        )
+                    )
+                )
+            )
+            .orderBy(desc(attendanceLogger.createdAt));
+
+        // Group logs by employeeId
+        const logsByEmployee = result.reduce((acc, log) => {
+            if (!acc[log.employeeId]) {
+                acc[log.employeeId] = [];
+            }
+            acc[log.employeeId].push(log);
+            return acc;
+        }, {} as Record<number, typeof result>);
+
+        return { data: logsByEmployee };
+    } catch (error) {
+        console.error("Error fetching attendance logs in bulk:", error);
+        return { error: "Failed to fetch attendance logs" };
+    }
+}
+
+export async function checkEmployeePresentInBulk(employeeIds: number[], date: Date) {
+    try {
+        const result = await db
+            .select()
+            .from(employeePresent)
+            .where(
+                and(
+                    inArray(employeePresent.employeeId, employeeIds),
+                    eq(employeePresent.date, sql`${startOfDay(date)}`)
+                )
+            );
+
+        // Convert array to record by employeeId
+        const presentByEmployee = result.reduce((acc, record) => {
+            acc[record.employeeId] = record;
+            return acc;
+        }, {} as Record<number, typeof result[0]>);
+
+        return { data: presentByEmployee };
+    } catch (error) {
+        console.error("Error checking employee present status in bulk:", error);
+        return { error: "Failed to check employee present status" };
+    }
+}
+
+export async function markEmployeeAbsent(employeeId: number, employeePresentId: number, date: Date) {
+    try {
+        // Update the present record to mark as absent
+        const [updatedPresent] = await db
+            .update(employeePresent)
+            .set({
+                status: 'absent',
+                absentTimestamp: date,
+                updatedAt: new Date()
+            })
+            .where(eq(employeePresent.id, employeePresentId))
+            .returning();
+
+        return { data: { presentRecord: updatedPresent } };
+    } catch (error) {
+        console.error("Error marking employee absent:", error);
+        return { error: "Failed to mark employee absent" };
+    }
+}
+
+export async function markEmployeeReturnFromAbsent(employeeId: number, employeePresentId: number) {
+    try {
+        // Get the present record to get the absent timestamp
+        const presentRecord = await db
+            .select()
+            .from(employeePresent)
+            .where(eq(employeePresent.id, employeePresentId))
+            .limit(1);
+
+        if (presentRecord.length === 0 || !presentRecord[0].absentTimestamp) {
+            throw new Error("No absent record found");
+        }
+
+        // Update the present record back to present status
+        const [updatedPresent] = await db
+            .update(employeePresent)
+            .set({
+                status: 'present',
+                updatedAt: new Date()
+            })
+            .where(eq(employeePresent.id, employeePresentId))
+            .returning();
+
+        // Create a new log entry with clock_in as now and clock_out as the absent time
+        const [newLog] = await db.insert(attendanceLogger).values({
+            employeeId,
+            employeePresentId,
+            clockIn: new Date(),
+            clockOut: presentRecord[0].absentTimestamp,
+            status: 'clock-in',
+            notes: 'Returned from absence',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        }).returning();
+
+        return { data: { presentRecord: updatedPresent, log: newLog } };
+    } catch (error) {
+        console.error("Error marking employee return:", error);
+        return { error: "Failed to mark employee return" };
+    }
+}
+
+export async function getTotalSalaryAdvances(employeeId: number) {
+    try {
+        const result = await db
+            .select({
+                total: sql<string>`COALESCE(SUM(${salaryAdvances.amount}), 0)::text`,
+            })
+            .from(salaryAdvances)
+            .where(eq(salaryAdvances.employeeId, employeeId));
+
+        return { data: result[0].total };
+    } catch (error) {
+        console.error("Error fetching total salary advances:", error);
+        return { error: "Failed to fetch total salary advances" };
+    }
+}
+
+export async function getAllSalaryAdvances(employeeId: number) {
+    try {
+        const result = await db
+            .select({
+                id: salaryAdvances.id,
+                amount: salaryAdvances.amount,
+                requestDate: salaryAdvances.requestDate,
+                description: salaryAdvances.description,
+                status: salaryAdvances.status,
+                createdAt: salaryAdvances.createdAt,
+            })
+            .from(salaryAdvances)
+            .where(eq(salaryAdvances.employeeId, employeeId))
+            .orderBy(desc(salaryAdvances.createdAt));
+
+        return { data: result };
+    } catch (error) {
+        console.error("Error fetching salary advances:", error);
+        return { error: "Failed to fetch salary advances" };
+    }
+}
+
+export async function createSalaryAdvance(data: {
+    employeeId: number;
+    amount: number;
+    description?: string;
+}) {
+    try {
+        const [newAdvance] = await db
+            .insert(salaryAdvances)
+            .values({
+                employeeId: data.employeeId,
+                amount: data.amount.toFixed(2),
+                requestDate: sql`CURRENT_DATE`,
+                description: data.description || null,
+                status: 'approved'
+            })
+            .returning();
+
+        revalidatePath('/dashboard');
+        return { data: newAdvance };
+    } catch (error) {
+        console.error("Error creating salary advance:", error);
+        return { error: "Failed to create salary advance" };
+    }
+}
+
+export async function getAllRegisters() {
+    try {
+        const result = await db
+            .select({
+                id: registers.id,
+                name: registers.description,
+            })
+            .from(registers)
+            .orderBy(registers.date);
+
+        return { data: result };
+    } catch (error) {
+        console.error("Error fetching registers:", error);
+        return { error: "Failed to fetch registers" };
+    }
+}
+
+export async function getAllEmployees(registerId: number) {
+    try {
+        const result = await db
+            .select({
+                id: employees.id,
+                name: employees.name,
+                startTime: employees.startTime,
+                endTime: employees.endTime,
+                durationAllowed: sql`CAST(${employees.durationAllowed} AS INTEGER)`,
+            })
+            .from(registerEmployees)
+            .innerJoin(employees, eq(registerEmployees.employeeId, employees.id))
+            .where(eq(registerEmployees.registerId, registerId))
+            .orderBy(employees.name);
+
+        return { data: result };
+    } catch (error) {
+        console.error("Error fetching employees:", error);
+        return { error: "Failed to fetch employees" };
     }
 } 

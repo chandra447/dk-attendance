@@ -7,6 +7,7 @@ export interface Employee {
     passcode?: string | null;
     startTime: string;
     endTime: string;
+    durationAllowed: number;
 }
 
 export interface EmployeeListProps {
@@ -19,6 +20,7 @@ export interface EmployeePresent {
     employeeId: number;
     date: Date;
     status: string;
+    absentTimestamp: Date | null;
     createdAt: Date;
     updatedAt: Date;
 }

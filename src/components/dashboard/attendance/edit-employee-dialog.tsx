@@ -44,6 +44,7 @@ export function EditEmployeeDialog({
         passcode: '',
         startTime: '09:00',
         endTime: '17:00',
+        durationAllowed: '120',
     });
 
     useEffect(() => {
@@ -56,6 +57,19 @@ export function EditEmployeeDialog({
                 passcode: employee.passcode || '',
                 startTime: employee.startTime || '09:00',
                 endTime: employee.endTime || '17:00',
+                durationAllowed: (employee.durationAllowed ?? 120).toString(),
+            });
+        } else {
+            // Reset form to default values when employee is null
+            setFormData({
+                name: '',
+                position: 'employee',
+                department: '',
+                baseSalary: '',
+                passcode: '',
+                startTime: '09:00',
+                endTime: '17:00',
+                durationAllowed: '120',
             });
         }
     }, [employee]);
@@ -75,8 +89,7 @@ export function EditEmployeeDialog({
                 id: employee.id,
                 ...formData,
                 baseSalary: parseFloat(formData.baseSalary),
-                startTime: formData.startTime,
-                endTime: formData.endTime,
+                durationAllowed: parseInt(formData.durationAllowed),
             });
 
             if ('data' in result) {
@@ -178,6 +191,21 @@ export function EditEmployeeDialog({
                                 onChange={(e) => setFormData(prev => ({ ...prev, baseSalary: e.target.value }))}
                                 required
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="durationAllowed">Duration Allowed (minutes)</Label>
+                            <Input
+                                id="durationAllowed"
+                                type="number"
+                                value={formData.durationAllowed}
+                                onChange={(e) => setFormData(prev => ({ ...prev, durationAllowed: e.target.value }))}
+                                required
+                                min="0"
+                                step="30"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Default: 120 minutes (2 hours)
+                            </p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">

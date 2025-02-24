@@ -27,6 +27,7 @@ export const employees = pgTable("employees", {
     baseSalary: decimal("base_salary", { precision: 10, scale: 2 }).notNull(),
     startTime: time("start_time").notNull(),
     endTime: time("end_time").notNull(),
+    durationAllowed: integer("duration_allowed").notNull().default(120), // 2 hours in minutes
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     passcode: varchar("passcode", { length: 5 })
@@ -43,9 +44,10 @@ export const registerEmployees = pgTable("register_employees", {
 
 export const registerLogs = pgTable("register_logs", {
     id: serial("id").primaryKey(),
-    registerEmployeeId: integer("register_employee_id").references(() => registerEmployees.id).notNull(),
-    logTime: timestamp("log_time").notNull(),
-    status: varchar("status", { length: 50 }).notNull(),
+    registerId: integer("register_id").references(() => registers.id).notNull(),
+    date: date("date").notNull(),
+    startTime: timestamp("start_time").notNull(),
+    status: varchar("status", { length: 50 }).notNull().default('active'),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -79,6 +81,7 @@ export const employeePresent = pgTable("employee_present", {
     employeeId: integer("employee_id").references(() => employees.id).notNull(),
     date: date("date").notNull(),
     status: varchar("status", { length: 50 }).notNull(),
+    absentTimestamp: timestamp("absent_timestamp"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -117,9 +120,9 @@ export const registerEmployeesRelations = relations(registerEmployees, ({ one })
 }));
 
 export const registerLogsRelations = relations(registerLogs, ({ one }) => ({
-    registerEmployee: one(registerEmployees, {
-        fields: [registerLogs.registerEmployeeId],
-        references: [registerEmployees.id],
+    register: one(registers, {
+        fields: [registerLogs.registerId],
+        references: [registers.id],
     }),
 }));
 

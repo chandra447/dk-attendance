@@ -36,6 +36,34 @@
       "when": 1740344601546,
       "tag": "0004_closed_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1740370892884,
+      "tag": "0005_familiar_shockwave",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1740371022972,
+      "tag": "0006_thick_firebrand",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1740373408048,
+      "tag": "0007_even_justin_hammer",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1740375097674,
+      "tag": "0008_faithful_tarantula",
+      "breakpoints": true
     }
   ]
 }
