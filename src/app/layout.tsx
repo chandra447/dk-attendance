@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,14 +49,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
-        <StackProvider app={stackServerApp}>
-          {children}
-        </StackProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          storageKey="dk-attendance-theme"
+        >
+          <StackProvider app={stackServerApp}>
+            <div className="relative min-h-screen">
+              <div className="absolute top-16 right-4 z-50">
+                <ModeToggle />
+              </div>
+              {children}
+            </div>
+          </StackProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

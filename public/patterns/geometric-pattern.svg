@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <!-- Background -->
+  <rect width="600" height="800" fill="#111827"/>
+  
+  <!-- Geometric pattern - circles and connecting lines -->
+  <g opacity="0.15">
+    <circle cx="150" cy="200" r="40" fill="#4B5563"/>
+    <circle cx="300" cy="150" r="30" fill="#4B5563"/>
+    <circle cx="100" cy="350" r="35" fill="#4B5563"/>
+    <circle cx="250" cy="400" r="25" fill="#4B5563"/>
+    <circle cx="150" cy="550" r="45" fill="#4B5563"/>
+    <circle cx="300" cy="650" r="30" fill="#4B5563"/>
+    
+    <!-- Connecting lines -->
+    <line x1="150" y1="200" x2="300" y2="150" stroke="#6B7280" stroke-width="2"/>
+    <line x1="150" y1="200" x2="100" y2="350" stroke="#6B7280" stroke-width="2"/>
+    <line x1="100" y1="350" x2="250" y2="400" stroke="#6B7280" stroke-width="2"/>
+    <line x1="250" y1="400" x2="150" y2="550" stroke="#6B7280" stroke-width="2"/>
+    <line x1="150" y1="550" x2="300" y2="650" stroke="#6B7280" stroke-width="2"/>
+    <line x1="300" y1="150" x2="250" y2="400" stroke="#6B7280" stroke-width="2"/>
+  </g>
+  
+  <!-- Accent elements -->
+  <g opacity="0.3">
+    <circle cx="150" cy="200" r="5" fill="#3B82F6"/>
+    <circle cx="300" cy="150" r="4" fill="#3B82F6"/>
+    <circle cx="100" cy="350" r="4" fill="#3B82F6"/>
+    <circle cx="250" cy="400" r="3" fill="#3B82F6"/>
+    <circle cx="150" cy="550" r="5" fill="#3B82F6"/>
+    <circle cx="300" cy="650" r="4" fill="#3B82F6"/>
+  </g>
+  
+  <!-- Additional subtle geometric shapes -->
+  <g opacity="0.1">
+    <rect x="50" y="250" width="100" height="100" rx="10" fill="#9CA3AF"/>
+    <rect x="200" y="500" width="80" height="80" rx="8" fill="#9CA3AF"/>
+    <rect x="270" y="300" width="60" height="60" rx="6" fill="#9CA3AF"/>
+  </g>
+  
+  <!-- Small dots pattern -->
+  <g opacity="0.1">
+    <circle cx="80" cy="180" r="2" fill="#E5E7EB"/>
+    <circle cx="120" cy="160" r="2" fill="#E5E7EB"/>
+    <circle cx="160" cy="140" r="2" fill="#E5E7EB"/>
+    <circle cx="200" cy="220" r="2" fill="#E5E7EB"/>
+    <circle cx="240" cy="180" r="2" fill="#E5E7EB"/>
+    <circle cx="60" cy="280" r="2" fill="#E5E7EB"/>
+    <circle cx="90" cy="320" r="2" fill="#E5E7EB"/>
+    <circle cx="130" cy="260" r="2" fill="#E5E7EB"/>
+    <circle cx="170" cy="300" r="2" fill="#E5E7EB"/>
+    <circle cx="210" cy="340" r="2" fill="#E5E7EB"/>
+    <circle cx="250" cy="280" r="2" fill="#E5E7EB"/>
+    <circle cx="70" cy="380" r="2" fill="#E5E7EB"/>
+    <circle cx="110" cy="420" r="2" fill="#E5E7EB"/>
+    <circle cx="150" cy="460" r="2" fill="#E5E7EB"/>
+    <circle cx="190" cy="440" r="2" fill="#E5E7EB"/>
+    <circle cx="230" cy="480" r="2" fill="#E5E7EB"/>
+    <circle cx="80" cy="520" r="2" fill="#E5E7EB"/>
+    <circle cx="120" cy="560" r="2" fill="#E5E7EB"/>
+    <circle cx="160" cy="600" r="2" fill="#E5E7EB"/>
+    <circle cx="200" cy="640" r="2" fill="#E5E7EB"/>
+    <circle cx="240" cy="680" r="2" fill="#E5E7EB"/>
+    <circle cx="280" cy="700" r="2" fill="#E5E7EB"/>
+  </g>
+</svg> 

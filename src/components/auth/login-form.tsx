@@ -1,13 +1,12 @@
 'use client';
 
-import { useStackApp } from "@stackframe/stack";
+import { useStackApp, OAuthButton } from "@stackframe/stack";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
@@ -33,7 +32,7 @@ export function LoginForm() {
             if (result.status === 'error') {
                 setError(result.error.message);
             } else {
-                router.push('/dashboard'); // Redirect to dashboard after successful login
+                router.push('/dashboard');
             }
         } catch (err) {
             setError('An unexpected error occurred');
@@ -45,46 +44,67 @@ export function LoginForm() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Login</CardTitle>
+                <CardTitle>Sign In</CardTitle>
                 <CardDescription>
-                    Enter your email below to login to your account
+                    Enter your credentials to access your account
                 </CardDescription>
             </CardHeader>
-            <form onSubmit={onSubmit}>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="m@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
+            <CardContent className="space-y-4">
+                <div className="w-full">
+                    <OAuthButton
+                        provider="google"
+                        type="sign-in"
+                    />
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                            Or continue with email
+                        </span>
                     </div>
-                    {error && (
-                        <div className="text-sm text-red-500">
-                            {error}
+                </div>
+
+                <form onSubmit={onSubmit}>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
                         </div>
-                    )}
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? "Loading..." : "Login"}
-                    </Button>
-                </CardFooter>
-            </form>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        {error && (
+                            <div className="text-sm text-red-500">
+                                {error}
+                            </div>
+                        )}
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Signing in...' : 'Sign in'}
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
         </Card>
     );
 } 

@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 import { stackServerApp } from '@/lib/stack';
 
 export async function middleware(request: NextRequest) {
-    console.log('Running middleware on URL: ', request.url);
 
     const user = await stackServerApp.getUser();
 
@@ -20,7 +19,6 @@ export async function middleware(request: NextRequest) {
 
     // If the user is logged in and trying to access auth page
     if (user && request.nextUrl.pathname === '/auth') {
-        console.log('User already logged in. Redirecting to dashboard');
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
