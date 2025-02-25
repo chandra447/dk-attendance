@@ -73,7 +73,6 @@ export async function getRegisterEmployees(registerId: number) {
             .innerJoin(employees, eq(registerEmployees.employeeId, employees.id))
             .where(eq(registerEmployees.registerId, registerId));
 
-        console.log('Fetched employees with duration:', result);
         return { data: result };
     } catch (error) {
         console.error("Error fetching register employees:", error);
@@ -109,7 +108,7 @@ export async function createEmployee(data: {
             employeeId: newEmployee.id,
         });
 
-        revalidatePath('/dashboard');
+        revalidatePath(`/dashboard/registers/${data.registerId}`);
         return { data: newEmployee };
     } catch (error) {
         console.error("Error creating employee:", error);
@@ -126,6 +125,7 @@ export async function updateEmployee(data: {
     passcode?: string;
     startTime: string;
     endTime: string;
+    registerId: string;
 }) {
     try {
         const [updated] = await db
@@ -143,27 +143,11 @@ export async function updateEmployee(data: {
             .where(eq(employees.id, data.id))
             .returning();
 
-        revalidatePath('/dashboard');
+        revalidatePath(`/dashboard/registers/${data.registerId}`);
         return { data: updated };
     } catch (error) {
         console.error("Error updating employee:", error);
         return { error: "Failed to update employee" };
-    }
-}
-
-export async function updateEmployeeStatus(employeeId: number, status: string) {
-    try {
-        const [updated] = await db
-            .update(employees)
-            .set({ status })
-            .where(eq(employees.id, employeeId))
-            .returning();
-
-        revalidatePath('/dashboard');
-        return { data: updated };
-    } catch (error) {
-        console.error("Error updating employee status:", error);
-        return { error: "Failed to update employee status" };
     }
 }
 
@@ -680,6 +664,7 @@ export async function createSalaryAdvance(data: {
     employeeId: number;
     amount: number;
     description?: string;
+    registerId: string;
 }) {
     try {
         const [newAdvance] = await db
@@ -693,7 +678,7 @@ export async function createSalaryAdvance(data: {
             })
             .returning();
 
-        revalidatePath('/dashboard');
+        revalidatePath(`/dashboard/registers/${data.registerId}`);
         return { data: newAdvance };
     } catch (error) {
         console.error("Error creating salary advance:", error);

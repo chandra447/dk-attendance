@@ -168,9 +168,6 @@ export function EmployeeList({ registerId, registerName }: EmployeeListProps) {
     };
 
     const updateEmployeeStatus = (employeeId: number, presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => {
-        console.log(`Updating status for employee ${employeeId}:`);
-        console.log('Present Record:', presentRecord);
-        console.log('Updated Logs:', logs);
 
         setEmployeePresentRecords(prev => ({
             ...prev,

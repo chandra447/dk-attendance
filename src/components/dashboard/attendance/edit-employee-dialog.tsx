@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Employee } from "../types/attendance-types";
 import { updateEmployee } from "@/app/actions/register";
+import { useRegister } from "@/app/contexts/RegisterContext";
 
 interface EditEmployeeDialogProps {
     employee: Employee | null;
@@ -35,6 +36,7 @@ export function EditEmployeeDialog({
     onOpenChange,
     onEmployeeUpdate
 }: EditEmployeeDialogProps) {
+    const { registerId } = useRegister();
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -90,6 +92,7 @@ export function EditEmployeeDialog({
                 ...formData,
                 baseSalary: parseFloat(formData.baseSalary),
                 durationAllowed: parseInt(formData.durationAllowed),
+                registerId
             });
 
             if ('data' in result) {
