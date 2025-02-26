@@ -15,18 +15,31 @@ import { Label } from "@/components/ui/label";
 import { Employee } from "../types/attendance-types";
 import { createSalaryAdvance, getTotalSalaryAdvances } from "@/app/actions/register";
 import { toast } from "react-hot-toast";
+import { useRegister } from "@/app/contexts/RegisterContext";
 
 interface SalaryAdvanceDialogProps {
     employee: Employee | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    registerId?: string;
 }
 
 export function SalaryAdvanceDialog({
     employee,
     open,
     onOpenChange,
+    registerId: propRegisterId,
 }: SalaryAdvanceDialogProps) {
+    let contextRegisterId: string | undefined;
+    try {
+        const { registerId } = useRegister();
+        contextRegisterId = registerId;
+    } catch (error) {
+        // Context not available, will use prop instead
+    }
+
+    const registerId = propRegisterId || contextRegisterId;
+
     const [isLoading, setIsLoading] = useState(false);
     const [totalAdvances, setTotalAdvances] = useState("0");
     const [formData, setFormData] = useState({
@@ -55,7 +68,10 @@ export function SalaryAdvanceDialog({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!employee) return;
+        if (!employee || !registerId) {
+            toast.error('Missing employee or register information');
+            return;
+        }
 
         setIsLoading(true);
         try {
@@ -63,6 +79,7 @@ export function SalaryAdvanceDialog({
                 employeeId: employee.id,
                 amount: parseFloat(formData.amount),
                 description: formData.description,
+                registerId
             });
 
             if ('data' in result) {
@@ -88,9 +105,9 @@ export function SalaryAdvanceDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Salary Advance</DialogTitle>
+                    <DialogTitle>Salary Advance Management</DialogTitle>
                     <DialogDescription>
-                        Create a new salary advance for {employee?.name}
+                        Add or subtract salary advance for {employee?.name}. Use negative values for refunds.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
@@ -107,7 +124,6 @@ export function SalaryAdvanceDialog({
                                 value={formData.amount}
                                 onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                                 required
-                                min="0"
                                 step="0.01"
                             />
                         </div>
@@ -128,9 +144,9 @@ export function SalaryAdvanceDialog({
                             {isLoading ? (
                                 <div className="flex items-center gap-2">
                                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                    <span>Creating...</span>
+                                    <span>Saving...</span>
                                 </div>
-                            ) : "Create Advance"}
+                            ) : "Save"}
                         </Button>
                     </DialogFooter>
                 </form>

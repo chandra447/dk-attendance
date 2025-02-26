@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Table,
@@ -11,11 +12,14 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { BanknoteIcon, ChevronRight } from "lucide-react";
+import { BanknoteIcon, ChevronRight, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { getAllSalaryAdvances } from "@/app/actions/register";
 import { cn } from "@/lib/utils";
 import { useReports } from "../context/reports-context";
+import { SalaryAdvanceDialog } from "@/components/dashboard/attendance/salary-advance-dialog";
+import { Employee as AttendanceEmployee } from "@/components/dashboard/types/attendance-types";
+import { useParams } from "next/navigation";
 
 interface SalaryAdvance {
     id: number;
@@ -27,11 +31,23 @@ interface SalaryAdvance {
 }
 
 export function SalaryAdvancesSection() {
+    const params = useParams();
+    const registerId = params.id as string;
     const { selectedEmployee, dateRange } = useReports();
     const [advances, setAdvances] = useState<SalaryAdvance[]>([]);
     const [totalAmount, setTotalAmount] = useState("0");
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [selectedMonthAdvances, setSelectedMonthAdvances] = useState<SalaryAdvance[]>([]);
+    const [showSalaryAdvanceDialog, setShowSalaryAdvanceDialog] = useState(false);
+
+    // Create a compatible employee object for the SalaryAdvanceDialog
+    const adaptedEmployee = selectedEmployee ? {
+        ...selectedEmployee,
+        position: 'employee',  // Default value
+        department: 'General', // Default value
+        baseSalary: '0',       // Default value
+        passcode: null
+    } as AttendanceEmployee : null;
 
     useEffect(() => {
         if (selectedEmployee && dateRange?.from && dateRange?.to) {
@@ -42,7 +58,7 @@ export function SalaryAdvancesSection() {
     const loadAdvances = async () => {
         if (!selectedEmployee) return;
         try {
-            const result = await getAllSalaryAdvances(selectedEmployee);
+            const result = await getAllSalaryAdvances(selectedEmployee.id);
             if ('data' in result && result.data) {
                 const mappedAdvances = result.data.map(advance => ({
                     ...advance,
@@ -81,6 +97,14 @@ export function SalaryAdvancesSection() {
         return groups;
     }, {} as Record<string, SalaryAdvance[]>);
 
+    const handleSalaryAdvanceDialogClose = (open: boolean) => {
+        setShowSalaryAdvanceDialog(open);
+        if (!open) {
+            // Reload advances after dialog closes to refresh the data
+            loadAdvances();
+        }
+    };
+
     if (!selectedEmployee || !dateRange) {
         return (
             <Card>
@@ -94,16 +118,27 @@ export function SalaryAdvancesSection() {
 
     return (
         <>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                        Total Amount Owned
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">₹{totalAmount}</div>
-                </CardContent>
-            </Card>
+            <div className="mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            Total Amount Owned
+                        </CardTitle>
+                        <Button
+                            variant="default"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            onClick={() => setShowSalaryAdvanceDialog(true)}
+                        >
+                            <PlusCircle className="h-4 w-4" />
+                            <span>Add Salary Advance</span>
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">₹{totalAmount}</div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {advances.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -191,6 +226,15 @@ export function SalaryAdvancesSection() {
                         <p>No salary advances to show</p>
                     </CardContent>
                 </Card>
+            )}
+
+            {selectedEmployee && (
+                <SalaryAdvanceDialog
+                    employee={adaptedEmployee}
+                    open={showSalaryAdvanceDialog}
+                    onOpenChange={handleSalaryAdvanceDialogClose}
+                    registerId={registerId}
+                />
             )}
         </>
     );

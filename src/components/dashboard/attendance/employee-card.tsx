@@ -49,6 +49,13 @@ export function EmployeeCard({
     const lastLog = logs.length > 0 ? logs[0] : null;
     const router = useRouter();
 
+    // Check if employee has returned from absence today
+    const hasReturnedFromAbsence = logs.some(log =>
+        log.notes === 'Returned from absence' &&
+        log.clockIn &&
+        new Date(log.clockIn).toDateString() === date.toDateString()
+    );
+
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
 
@@ -202,7 +209,7 @@ export function EmployeeCard({
         }
     };
 
-    // Determine button states based on present record and last log
+    // Determine button states based on present record, last log, and return status
     const shouldEnableClockIn = presentRecord && lastLog?.status === 'clock-out';
     const shouldEnableClockOut = presentRecord && (!lastLog || lastLog.status === 'clock-in');
 
@@ -284,8 +291,12 @@ export function EmployeeCard({
 
     return (
         <Card className="relative w-full">
-            {lastLog && lastLog.status === 'clock-out' && (
+            {lastLog && lastLog.status === 'clock-out' && !hasReturnedFromAbsence && (
                 <div className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+            )}
+
+            {hasReturnedFromAbsence && (
+                <div className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500" />
             )}
 
             <CardContent className="pt-6">
@@ -332,12 +343,14 @@ export function EmployeeCard({
                         </div>
                         <div className="text-sm text-muted-foreground h-5">
                             {presentRecord ? (
-                                `Present since ${format(presentRecord.createdAt, "h:mm a")}`
+                                hasReturnedFromAbsence ?
+                                    "Returned from absence - done for today" :
+                                    `Present since ${format(presentRecord.createdAt, "h:mm a")}`
                             ) : (
                                 "Not present"
                             )}
                         </div>
-                        {lastLog?.status === 'clock-out' ? (
+                        {lastLog?.status === 'clock-out' && !hasReturnedFromAbsence ? (
                             <div className="text-sm font-mono text-red-500">
                                 Clocked out for: {clockOutDuration}
                             </div>
@@ -367,7 +380,7 @@ export function EmployeeCard({
                                     </div>
                                 ) : presentRecord ? "Present" : "Mark Present"}
                             </Button>
-                            {presentRecord?.status === 'present' && (
+                            {presentRecord?.status === 'present' && !hasReturnedFromAbsence && (
                                 <Button
                                     onClick={handleAbsent}
                                     variant="destructive"
@@ -391,7 +404,7 @@ export function EmployeeCard({
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={handleClockIn}
-                                disabled={isLoading || !shouldEnableClockIn}
+                                disabled={isLoading || !shouldEnableClockIn || hasReturnedFromAbsence}
                                 variant="outline"
                                 size="sm"
                             >

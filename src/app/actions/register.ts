@@ -179,6 +179,31 @@ export async function getEmployeeAttendanceLogs(employeeId: number, startDate: D
                         and(
                             gte(attendanceLogger.clockOut, sql`${startTime}`),
                             lte(attendanceLogger.clockOut, sql`${endTime}`)
+                        ),
+                        // Include logs where clockIn is null but clockOut is within range
+                        and(
+                            isNull(attendanceLogger.clockIn),
+                            gte(attendanceLogger.clockOut, sql`${startTime}`),
+                            lte(attendanceLogger.clockOut, sql`${endTime}`)
+                        ),
+                        // Include logs where clockOut is null but clockIn is within range
+                        and(
+                            isNull(attendanceLogger.clockOut),
+                            gte(attendanceLogger.clockIn, sql`${startTime}`),
+                            lte(attendanceLogger.clockIn, sql`${endTime}`)
+                        ),
+                        // Also include logs where employeePresentId matches a present record for this date range
+                        inArray(
+                            attendanceLogger.employeePresentId,
+                            db.select({ id: employeePresent.id })
+                                .from(employeePresent)
+                                .where(
+                                    and(
+                                        eq(employeePresent.employeeId, employeeId),
+                                        gte(employeePresent.date, sql`${startTime}`),
+                                        lte(employeePresent.date, sql`${endTime}`)
+                                    )
+                                )
                         )
                     )
                 )
@@ -513,6 +538,31 @@ export async function getEmployeeAttendanceLogsInBulk(employeeIds: number[], dat
                         and(
                             gte(attendanceLogger.clockOut, sql`${startTime}`),
                             lte(attendanceLogger.clockOut, sql`${endTime}`)
+                        ),
+                        // Include logs where clockIn is null but clockOut is within range
+                        and(
+                            isNull(attendanceLogger.clockIn),
+                            gte(attendanceLogger.clockOut, sql`${startTime}`),
+                            lte(attendanceLogger.clockOut, sql`${endTime}`)
+                        ),
+                        // Include logs where clockOut is null but clockIn is within range
+                        and(
+                            isNull(attendanceLogger.clockOut),
+                            gte(attendanceLogger.clockIn, sql`${startTime}`),
+                            lte(attendanceLogger.clockIn, sql`${endTime}`)
+                        ),
+                        // Also include logs where employeePresentId matches a present record for this date
+                        // This ensures we get all logs related to this day's attendance
+                        inArray(
+                            attendanceLogger.employeePresentId,
+                            db.select({ id: employeePresent.id })
+                                .from(employeePresent)
+                                .where(
+                                    and(
+                                        inArray(employeePresent.employeeId, employeeIds),
+                                        eq(employeePresent.date, sql`${startTime}`)
+                                    )
+                                )
                         )
                     )
                 )
@@ -572,6 +622,35 @@ export async function markEmployeeAbsent(employeeId: number, employeePresentId: 
             })
             .where(eq(employeePresent.id, employeePresentId))
             .returning();
+        // First check if there's an existing clock-out log for this present record
+        const existingLog = await db
+            .select()
+            .from(attendanceLogger)
+            .where(
+                and(
+                    eq(attendanceLogger.employeeId, employeeId),
+                    eq(attendanceLogger.employeePresentId, employeePresentId),
+                    eq(attendanceLogger.status, 'clock-out')
+                )
+            )
+            .orderBy(desc(attendanceLogger.createdAt))
+            .limit(1);
+
+        let newLog;
+
+        if (existingLog.length > 0) {
+            // Update the existing clock-out log to clock-in
+            [newLog] = await db
+                .update(attendanceLogger)
+                .set({
+                    clockIn: new Date(),
+                    status: 'clock-in',
+                    notes: 'Marking as from absence',
+                    updatedAt: new Date()
+                })
+                .where(eq(attendanceLogger.id, existingLog[0].id))
+                .returning();
+        }
 
         return { data: { presentRecord: updatedPresent } };
     } catch (error) {
@@ -603,17 +682,47 @@ export async function markEmployeeReturnFromAbsent(employeeId: number, employeeP
             .where(eq(employeePresent.id, employeePresentId))
             .returning();
 
-        // Create a new log entry with clock_in as now and clock_out as the absent time
-        const [newLog] = await db.insert(attendanceLogger).values({
-            employeeId,
-            employeePresentId,
-            clockIn: new Date(),
-            clockOut: presentRecord[0].absentTimestamp,
-            status: 'clock-in',
-            notes: 'Returned from absence',
-            createdAt: new Date(),
-            updatedAt: new Date()
-        }).returning();
+        // Check if there's an existing clock-out log for this present record
+        const existingLog = await db
+            .select()
+            .from(attendanceLogger)
+            .where(
+                and(
+                    eq(attendanceLogger.employeeId, employeeId),
+                    eq(attendanceLogger.employeePresentId, employeePresentId),
+                    eq(attendanceLogger.status, 'clock-out')
+                )
+            )
+            .orderBy(desc(attendanceLogger.createdAt))
+            .limit(1);
+
+        let newLog;
+
+        if (existingLog.length > 0) {
+            // Update the existing clock-out log to clock-in
+            [newLog] = await db
+                .update(attendanceLogger)
+                .set({
+                    clockIn: new Date(),
+                    status: 'clock-in',
+                    notes: 'Returned from absence',
+                    updatedAt: new Date()
+                })
+                .where(eq(attendanceLogger.id, existingLog[0].id))
+                .returning();
+        } else {
+            // Create a new log entry with clock_in as now and clock_out as the absent time
+            [newLog] = await db.insert(attendanceLogger).values({
+                employeeId,
+                employeePresentId,
+                clockIn: new Date(),
+                clockOut: presentRecord[0].absentTimestamp,
+                status: 'clock-in',
+                notes: 'Returned from absence',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }).returning();
+        }
 
         return { data: { presentRecord: updatedPresent, log: newLog } };
     } catch (error) {
