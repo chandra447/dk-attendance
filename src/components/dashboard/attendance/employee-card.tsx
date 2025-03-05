@@ -335,7 +335,7 @@ export function EmployeeCard({
                             )}>
                                 {employee.name}
                             </h3>
-                            {presentRecord ? (
+                            {presentRecord && presentRecord.status === 'present' ? (
                                 <UserRoundCheck className="h-5 w-5 text-green-500" />
                             ) : (
                                 <UserRoundX className="h-5 w-5 text-red-500" />
@@ -380,7 +380,7 @@ export function EmployeeCard({
                                     </div>
                                 ) : presentRecord ? "Present" : "Mark Present"}
                             </Button>
-                            {presentRecord?.status === 'present' && !hasReturnedFromAbsence && (
+                            {presentRecord?.status === 'present' && !hasReturnedFromAbsence && (!lastLog || lastLog.status !== 'clock-out') && (
                                 <Button
                                     onClick={handleAbsent}
                                     variant="destructive"
@@ -453,4 +453,4 @@ export function EmployeeCard({
             />
         </Card>
     );
-} 
+}
