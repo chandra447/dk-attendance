@@ -8,6 +8,62 @@
       "when": 1738394193588,
       "tag": "0000_smooth_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1740290751923,
+      "tag": "0001_tan_proemial_gods",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1740292695072,
+      "tag": "0002_busy_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1740297723997,
+      "tag": "0003_misty_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1740344601546,
+      "tag": "0004_closed_thanos",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1740370892884,
+      "tag": "0005_familiar_shockwave",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1740371022972,
+      "tag": "0006_thick_firebrand",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1740373408048,
+      "tag": "0007_even_justin_hammer",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1740375097674,
+      "tag": "0008_faithful_tarantula",
+      "breakpoints": true
     }
   ]
 }

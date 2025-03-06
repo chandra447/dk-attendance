@@ -1,6 +1,5 @@
-import { pgTable, serial, varchar, timestamp, integer, decimal, date, text, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, decimal, date, text, primaryKey, uniqueIndex, time } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-
 
 export const users = pgTable("users", {
     id: serial("id").primaryKey(),
@@ -24,10 +23,14 @@ export const employees = pgTable("employees", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     position: varchar("position", { length: 255 }).notNull(),
-    department: varchar("department", { length: 255 }).notNull(),
+    department: varchar("department", { length: 255 }),
     baseSalary: decimal("base_salary", { precision: 10, scale: 2 }).notNull(),
+    startTime: time("start_time").notNull(),
+    endTime: time("end_time").notNull(),
+    durationAllowed: integer("duration_allowed").notNull().default(120), // 2 hours in minutes
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    passcode: varchar("passcode", { length: 5 })
 });
 
 export const registerEmployees = pgTable("register_employees", {
@@ -41,9 +44,10 @@ export const registerEmployees = pgTable("register_employees", {
 
 export const registerLogs = pgTable("register_logs", {
     id: serial("id").primaryKey(),
-    registerEmployeeId: integer("register_employee_id").references(() => registerEmployees.id).notNull(),
-    logTime: timestamp("log_time").notNull(),
-    status: varchar("status", { length: 50 }).notNull(),
+    registerId: integer("register_id").references(() => registers.id).notNull(),
+    date: date("date").notNull(),
+    startTime: timestamp("start_time").notNull(),
+    status: varchar("status", { length: 50 }).notNull().default('active'),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -52,8 +56,9 @@ export const registerLogs = pgTable("register_logs", {
 export const attendanceLogger = pgTable("attendance_logger", {
     id: serial("id").primaryKey(),
     employeeId: integer("employee_id").references(() => employees.id).notNull(),
-    clockIn: timestamp("clock_in").notNull(),
-    clockOut: timestamp("clock_out"),
+    employeePresentId: integer("employee_present_id").references(() => employeePresent.id).notNull(),
+    clockIn: timestamp("clock_in"),
+    clockOut: timestamp("clock_out").notNull(),
     status: varchar("status", { length: 50 }).notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -67,6 +72,16 @@ export const salaryAdvances = pgTable("salary_advances", {
     requestDate: date("request_date").notNull(),
     description: text("description"),
     status: varchar("status", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeePresent = pgTable("employee_present", {
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id").references(() => employees.id).notNull(),
+    date: date("date").notNull(),
+    status: varchar("status", { length: 50 }).notNull(),
+    absentTimestamp: timestamp("absent_timestamp"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -90,6 +105,7 @@ export const employeesRelations = relations(employees, ({ many }) => ({
     registerLogs: many(registerLogs),
     attendanceLogs: many(attendanceLogger),
     salaryAdvances: many(salaryAdvances),
+    employeePresents: many(employeePresent),
 }));
 
 export const registerEmployeesRelations = relations(registerEmployees, ({ one }) => ({
@@ -104,8 +120,16 @@ export const registerEmployeesRelations = relations(registerEmployees, ({ one })
 }));
 
 export const registerLogsRelations = relations(registerLogs, ({ one }) => ({
-    registerEmployee: one(registerEmployees, {
-        fields: [registerLogs.registerEmployeeId],
-        references: [registerEmployees.id],
+    register: one(registers, {
+        fields: [registerLogs.registerId],
+        references: [registers.id],
     }),
+}));
+
+export const employeePresentRelations = relations(employeePresent, ({ one, many }) => ({
+    employee: one(employees, {
+        fields: [employeePresent.employeeId],
+        references: [employees.id],
+    }),
+    attendanceLogs: many(attendanceLogger),
 }));

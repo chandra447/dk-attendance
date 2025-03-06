@@ -1,0 +1,1 @@
+ALTER TABLE "employees" ALTER COLUMN "duration_allowed" SET DEFAULT 120;
