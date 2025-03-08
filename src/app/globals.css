@@ -21,82 +21,45 @@ body {
   transition: background-color 0.3s ease;
 }
 
-/* iOS status bar fix */
-@supports (-webkit-touch-callout: none) {
-
-  /* iOS specific styles */
-  .ios-status-bar-light {
-    background-color: #ffffff;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top);
-    z-index: 9999;
-  }
-
-  .ios-status-bar-dark {
-    background-color: #0f1729;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top);
-    z-index: 9999;
-  }
-
-  html.light .ios-status-bar-light {
-    display: block;
-  }
-
-  html.light .ios-status-bar-dark {
-    display: none;
-  }
-
-  html.dark .ios-status-bar-light {
-    display: none;
-  }
-
-  html.dark .ios-status-bar-dark {
-    display: block;
-  }
+/* Status bar fixes */
+.status-bar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0);
+  z-index: 9999;
+  pointer-events: none;
 }
 
-/* Fix for PWA status bar in dark mode */
+/* Light mode */
+html.light .status-bar-overlay {
+  background-color: #ffffff;
+}
+
+/* Dark mode */
+html.dark .status-bar-overlay {
+  background-color: #0f1729;
+}
+
+/* System preference overrides */
 @media (prefers-color-scheme: dark) {
   body {
     background-color: #0f1729;
   }
 
-  /* Ensure status bar has the same color */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top);
+  .status-bar-overlay:not(.light-forced):not(.dark-forced) {
     background-color: #0f1729;
-    z-index: 9999;
   }
 }
 
-/* Fix for PWA status bar in light mode */
 @media (prefers-color-scheme: light) {
   body {
     background-color: #ffffff;
   }
 
-  /* Ensure status bar has the same color */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top);
+  .status-bar-overlay:not(.light-forced):not(.dark-forced) {
     background-color: #ffffff;
-    z-index: 9999;
   }
 }
 
@@ -114,15 +77,7 @@ html.light body {
   background-color: #ffffff !important;
 }
 
-html.light body::before {
-  background-color: #ffffff !important;
-}
-
 html.dark body {
-  background-color: #0f1729 !important;
-}
-
-html.dark body::before {
   background-color: #0f1729 !important;
 }
 
@@ -175,12 +130,8 @@ html.dark body::before {
   }
 }
 
-/* Fix for PWA status bar in dark mode */
+/* Dark mode pull-to-refresh styling */
 @media (prefers-color-scheme: dark) {
-  body {
-    background-color: #0f1729;
-  }
-
   .ptr-element {
     color: #ffffff;
   }
@@ -188,6 +139,22 @@ html.dark body::before {
   .ptr-element .ptr-icon {
     color: #ffffff;
   }
+}
+
+html.dark .ptr-element {
+  color: #ffffff !important;
+}
+
+html.dark .ptr-element .ptr-icon {
+  color: #ffffff !important;
+}
+
+html.light .ptr-element {
+  color: #0f1729 !important;
+}
+
+html.light .ptr-element .ptr-icon {
+  color: #0f1729 !important;
 }
 
 @layer base {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 interface PullToRefreshOptions {
     onRefresh: () => Promise<void>;
@@ -15,10 +15,14 @@ export function usePullToRefresh({
 }: PullToRefreshOptions) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
-    const [startY, setStartY] = useState(0);
+    const refreshElementRef = useRef<HTMLDivElement | null>(null);
+    const isPullingRef = useRef(false);
+    const touchStartYRef = useRef(0);
 
     // Wrap the refresh function to handle errors
     const handleRefresh = useCallback(async () => {
+        if (isRefreshing) return;
+
         try {
             setIsRefreshing(true);
             await onRefresh();
@@ -26,17 +30,23 @@ export function usePullToRefresh({
             console.error('Pull to refresh error:', error);
         } finally {
             setIsRefreshing(false);
+            setPullDistance(0);
+            if (refreshElementRef.current) {
+                refreshElementRef.current.style.transform = 'translateY(-50px)';
+                refreshElementRef.current.classList.remove('ptr-refresh', 'ptr-loading');
+
+                const iconElement = refreshElementRef.current.querySelector('.ptr-icon') as HTMLElement;
+                const spinnerElement = refreshElementRef.current.querySelector('.ptr-spinner') as HTMLElement;
+
+                if (iconElement) iconElement.style.display = 'inline-block';
+                if (spinnerElement) spinnerElement.style.display = 'none';
+            }
         }
-    }, [onRefresh]);
+    }, [isRefreshing, onRefresh]);
 
     useEffect(() => {
         // Only run in browser environment
         if (typeof window === 'undefined' || !containerElement) return;
-
-        let touchStartY = 0;
-        let touchMoveY = 0;
-        let isPulling = false;
-        let refreshElement: HTMLDivElement | null = null;
 
         // Create refresh indicator element
         const createRefreshElement = () => {
@@ -46,16 +56,17 @@ export function usePullToRefresh({
                 existingElement.parentNode?.removeChild(existingElement);
             }
 
-            refreshElement = document.createElement('div');
-            refreshElement.className = 'ptr-element';
-            refreshElement.innerHTML = `
+            const element = document.createElement('div');
+            element.className = 'ptr-element';
+            element.innerHTML = `
         <div class="ptr-icon">↓</div>
         <div class="ptr-spinner" style="display: none;"></div>
       `;
-            refreshElement.style.transform = 'translateY(-50px)';
-            document.body.insertBefore(refreshElement, document.body.firstChild);
+            element.style.transform = 'translateY(-50px)';
+            document.body.insertBefore(element, document.body.firstChild);
 
-            return refreshElement;
+            refreshElementRef.current = element;
+            return element;
         };
 
         // Create the element on mount
@@ -65,26 +76,20 @@ export function usePullToRefresh({
             // Only enable pull-to-refresh when at the top of the page
             if (window.scrollY > 5) return;
 
-            touchStartY = e.touches[0].clientY;
-            setStartY(touchStartY);
-            isPulling = true;
-
-            // Ensure refresh element exists
-            if (!refreshElement) {
-                refreshElement = createRefreshElement();
-            }
+            touchStartYRef.current = e.touches[0].clientY;
+            isPullingRef.current = true;
         };
 
         const handleTouchMove = (e: TouchEvent) => {
-            if (!isPulling || !refreshElement) return;
+            if (!isPullingRef.current || !refreshElementRef.current) return;
 
-            touchMoveY = e.touches[0].clientY;
-            const distance = touchMoveY - touchStartY;
+            const touchMoveY = e.touches[0].clientY;
+            const distance = touchMoveY - touchStartYRef.current;
 
             // Only allow pulling down, not up
             if (distance <= 0) {
                 setPullDistance(0);
-                refreshElement.style.transform = `translateY(-50px)`;
+                refreshElementRef.current.style.transform = `translateY(-50px)`;
                 return;
             }
 
@@ -93,13 +98,13 @@ export function usePullToRefresh({
             setPullDistance(pullDistanceWithResistance);
 
             // Update the refresh element position
-            refreshElement.style.transform = `translateY(${pullDistanceWithResistance - 50}px)`;
+            refreshElementRef.current.style.transform = `translateY(${pullDistanceWithResistance - 50}px)`;
 
             // Add refresh class when pulled enough
             if (pullDistanceWithResistance >= pullDownThreshold) {
-                refreshElement.classList.add('ptr-refresh');
+                refreshElementRef.current.classList.add('ptr-refresh');
             } else {
-                refreshElement.classList.remove('ptr-refresh');
+                refreshElementRef.current.classList.remove('ptr-refresh');
             }
 
             // Prevent default to disable browser's native pull-to-refresh
@@ -109,36 +114,26 @@ export function usePullToRefresh({
         };
 
         const handleTouchEnd = async () => {
-            if (!isPulling || !refreshElement) return;
-            isPulling = false;
+            if (!isPullingRef.current || !refreshElementRef.current) return;
+            isPullingRef.current = false;
 
             // If pulled enough, trigger refresh
             if (pullDistance >= pullDownThreshold) {
-                setIsRefreshing(true);
-                refreshElement.classList.add('ptr-loading');
+                refreshElementRef.current.classList.add('ptr-loading');
 
-                const iconElement = refreshElement.querySelector('.ptr-icon') as HTMLElement;
-                const spinnerElement = refreshElement.querySelector('.ptr-spinner') as HTMLElement;
+                const iconElement = refreshElementRef.current.querySelector('.ptr-icon') as HTMLElement;
+                const spinnerElement = refreshElementRef.current.querySelector('.ptr-spinner') as HTMLElement;
 
                 if (iconElement) iconElement.style.display = 'none';
                 if (spinnerElement) spinnerElement.style.display = 'block';
 
-                try {
-                    await handleRefresh();
-                } finally {
-                    setIsRefreshing(false);
-                    setPullDistance(0);
-                    refreshElement.classList.remove('ptr-refresh', 'ptr-loading');
-
-                    if (iconElement) iconElement.style.display = 'inline-block';
-                    if (spinnerElement) spinnerElement.style.display = 'none';
-
-                    refreshElement.style.transform = 'translateY(-50px)';
-                }
+                await handleRefresh();
             } else {
                 // Reset if not pulled enough
                 setPullDistance(0);
-                refreshElement.style.transform = 'translateY(-50px)';
+                if (refreshElementRef.current) {
+                    refreshElementRef.current.style.transform = 'translateY(-50px)';
+                }
             }
         };
 
@@ -154,11 +149,11 @@ export function usePullToRefresh({
             containerElement.removeEventListener('touchend', handleTouchEnd);
 
             // Remove refresh element
-            if (refreshElement && refreshElement.parentNode) {
-                refreshElement.parentNode.removeChild(refreshElement);
+            if (refreshElementRef.current && refreshElementRef.current.parentNode) {
+                refreshElementRef.current.parentNode.removeChild(refreshElementRef.current);
             }
         };
-    }, [containerElement, handleRefresh, pullDistance, pullDownThreshold, startY]);
+    }, [containerElement, handleRefresh, pullDistance, pullDownThreshold]);
 
     return { isRefreshing };
 } 

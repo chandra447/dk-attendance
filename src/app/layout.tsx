@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import CustomHead from "./head";
 import { defaultMetadata, defaultViewport } from "./metadata";
+import Script from 'next/script';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,9 +37,48 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {/* iOS status bar elements */}
-        <div className="ios-status-bar-light"></div>
-        <div className="ios-status-bar-dark"></div>
+        {/* Status bar overlay */}
+        <div className="status-bar-overlay"></div>
+
+        {/* Theme change handler script */}
+        <Script id="theme-change-handler" strategy="afterInteractive">
+          {`
+            (function() {
+              // Function to update status bar color based on theme
+              function updateStatusBarColor(theme) {
+                const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+                if (metaThemeColor) {
+                  if (theme === 'dark') {
+                    metaThemeColor.setAttribute('content', '#0f1729');
+                  } else {
+                    metaThemeColor.setAttribute('content', '#ffffff');
+                  }
+                }
+              }
+              
+              // Initial theme detection
+              const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              updateStatusBarColor(isDarkMode ? 'dark' : 'light');
+              
+              // Watch for theme changes
+              const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                  if (mutation.attributeName === 'class' && mutation.target === document.documentElement) {
+                    const htmlElement = document.documentElement;
+                    if (htmlElement.classList.contains('dark')) {
+                      updateStatusBarColor('dark');
+                    } else {
+                      updateStatusBarColor('light');
+                    }
+                  }
+                });
+              });
+              
+              // Start observing theme changes
+              observer.observe(document.documentElement, { attributes: true });
+            })();
+          `}
+        </Script>
 
         <ThemeProvider
           attribute="class"
