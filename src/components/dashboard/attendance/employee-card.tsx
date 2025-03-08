@@ -365,7 +365,7 @@ export function EmployeeCard({
                                 "Not present"
                             )}
                         </div>
-                        {lastLog?.status === 'clock-out' && !hasReturnedFromAbsence ? (
+                        {lastLog?.status === 'clock-out' ? (
                             <div className="text-xs sm:text-sm font-mono text-red-500">
                                 Clocked out for: {clockOutDuration}
                             </div>
@@ -395,7 +395,7 @@ export function EmployeeCard({
                                     </div>
                                 ) : presentRecord ? "Present" : "Mark Present"}
                             </Button>
-                            {presentRecord?.status === 'present' && !hasReturnedFromAbsence && (!lastLog || lastLog.status !== 'clock-out') && (
+                            {presentRecord?.status === 'present' && (!lastLog || lastLog.status !== 'clock-out') && (
                                 <Button
                                     onClick={handleAbsent}
                                     variant="destructive"
@@ -417,7 +417,7 @@ export function EmployeeCard({
                             )}
                         </div>
                         <div className="flex flex-col gap-2">
-                            {presentRecord?.status === 'present' && !hasReturnedFromAbsence && (
+                            {presentRecord?.status === 'present' && (
                                 <>
                                     {lastLog?.status === 'clock-in' ? (
                                         <Button
