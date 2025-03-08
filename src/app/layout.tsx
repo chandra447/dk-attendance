@@ -71,6 +71,8 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <CustomHead />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1729" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -84,7 +86,7 @@ export default function RootLayout({
           storageKey="dk-attendance-theme"
         >
           <StackProvider app={stackServerApp}>
-            <div className="relative min-h-screen">
+            <div className="relative min-h-screen bg-background">
               <div className="absolute top-16 right-4 z-50">
                 <ModeToggle />
               </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface PullToRefreshOptions {
     onRefresh: () => Promise<void>;
@@ -17,8 +17,21 @@ export function usePullToRefresh({
     const [pullDistance, setPullDistance] = useState(0);
     const [startY, setStartY] = useState(0);
 
+    // Wrap the refresh function to handle errors
+    const handleRefresh = useCallback(async () => {
+        try {
+            setIsRefreshing(true);
+            await onRefresh();
+        } catch (error) {
+            console.error('Pull to refresh error:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [onRefresh]);
+
     useEffect(() => {
-        if (!containerElement || typeof window === 'undefined') return;
+        // Only run in browser environment
+        if (typeof window === 'undefined' || !containerElement) return;
 
         let touchStartY = 0;
         let touchMoveY = 0;
@@ -27,7 +40,11 @@ export function usePullToRefresh({
 
         // Create refresh indicator element
         const createRefreshElement = () => {
-            if (document.querySelector('.ptr-element')) return;
+            // Remove any existing element first
+            const existingElement = document.querySelector('.ptr-element');
+            if (existingElement) {
+                existingElement.parentNode?.removeChild(existingElement);
+            }
 
             refreshElement = document.createElement('div');
             refreshElement.className = 'ptr-element';
@@ -41,16 +58,21 @@ export function usePullToRefresh({
             return refreshElement;
         };
 
+        // Create the element on mount
+        createRefreshElement();
+
         const handleTouchStart = (e: TouchEvent) => {
             // Only enable pull-to-refresh when at the top of the page
-            if (window.scrollY > 0) return;
+            if (window.scrollY > 5) return;
 
             touchStartY = e.touches[0].clientY;
             setStartY(touchStartY);
             isPulling = true;
 
-            // Create refresh element if it doesn't exist
-            createRefreshElement();
+            // Ensure refresh element exists
+            if (!refreshElement) {
+                refreshElement = createRefreshElement();
+            }
         };
 
         const handleTouchMove = (e: TouchEvent) => {
@@ -81,7 +103,7 @@ export function usePullToRefresh({
             }
 
             // Prevent default to disable browser's native pull-to-refresh
-            if (window.scrollY === 0 && distance > 0) {
+            if (window.scrollY <= 5 && distance > 0) {
                 e.preventDefault();
             }
         };
@@ -94,21 +116,23 @@ export function usePullToRefresh({
             if (pullDistance >= pullDownThreshold) {
                 setIsRefreshing(true);
                 refreshElement.classList.add('ptr-loading');
+
                 const iconElement = refreshElement.querySelector('.ptr-icon') as HTMLElement;
                 const spinnerElement = refreshElement.querySelector('.ptr-spinner') as HTMLElement;
+
                 if (iconElement) iconElement.style.display = 'none';
                 if (spinnerElement) spinnerElement.style.display = 'block';
 
                 try {
-                    await onRefresh();
-                } catch (error) {
-                    console.error('Refresh failed:', error);
+                    await handleRefresh();
                 } finally {
                     setIsRefreshing(false);
                     setPullDistance(0);
                     refreshElement.classList.remove('ptr-refresh', 'ptr-loading');
+
                     if (iconElement) iconElement.style.display = 'inline-block';
                     if (spinnerElement) spinnerElement.style.display = 'none';
+
                     refreshElement.style.transform = 'translateY(-50px)';
                 }
             } else {
@@ -134,7 +158,7 @@ export function usePullToRefresh({
                 refreshElement.parentNode.removeChild(refreshElement);
             }
         };
-    }, [containerElement, onRefresh, pullDistance, pullDownThreshold, startY]);
+    }, [containerElement, handleRefresh, pullDistance, pullDownThreshold, startY]);
 
     return { isRefreshing };
 } 
