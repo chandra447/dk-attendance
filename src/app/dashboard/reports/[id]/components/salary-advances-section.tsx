@@ -52,38 +52,68 @@ export function SalaryAdvancesSection() {
     useEffect(() => {
         if (selectedEmployee && dateRange?.from && dateRange?.to) {
             loadAdvances();
+        } else {
+            setAdvances([]);
+            setTotalAmount("0");
+            setSelectedMonth(null);
+            setSelectedMonthAdvances([]);
         }
     }, [selectedEmployee, dateRange]);
 
     const loadAdvances = async () => {
-        if (!selectedEmployee) return;
+        if (!selectedEmployee || !dateRange?.from || !dateRange?.to) return;
+
         try {
             const result = await getAllSalaryAdvances(selectedEmployee.id);
             if ('data' in result && result.data) {
-                const mappedAdvances = result.data.map(advance => ({
+                const advancesList = result.data.map(advance => ({
                     ...advance,
                     requestDate: new Date(advance.requestDate),
                     createdAt: new Date(advance.createdAt)
                 }));
 
-                setAdvances(mappedAdvances);
-                const total = mappedAdvances.reduce((sum, advance) =>
-                    sum + parseFloat(advance.amount), 0
-                ).toFixed(2);
-                setTotalAmount(total);
+                // Filter advances by date range
+                const filteredAdvances = advancesList.filter(advance => {
+                    // At this point we know dateRange.from and dateRange.to are defined
+                    // because we checked at the beginning of the function
+                    const fromDate = dateRange.from as Date;
+                    const toDate = dateRange.to as Date;
+                    return advance.requestDate >= fromDate &&
+                        advance.requestDate <= toDate;
+                });
+
+                // Sort by date (newest first)
+                filteredAdvances.sort((a, b) => b.requestDate.getTime() - a.requestDate.getTime());
+                setAdvances(filteredAdvances);
+
+                // Calculate total amount
+                const total = filteredAdvances.reduce((sum, advance) => {
+                    return sum + parseFloat(advance.amount);
+                }, 0);
+                setTotalAmount(total.toFixed(2));
             }
         } catch (error) {
-            console.error('Error loading advances:', error);
+            console.error('Error loading salary advances:', error);
         }
     };
 
     const handleMonthClick = (month: string, monthAdvances: SalaryAdvance[]) => {
         if (selectedMonth === month) {
+            // If clicking the same month, toggle off
             setSelectedMonth(null);
             setSelectedMonthAdvances([]);
         } else {
+            // Otherwise, select the month and show its advances
             setSelectedMonth(month);
             setSelectedMonthAdvances(monthAdvances);
+        }
+    };
+
+    const handleSalaryAdvanceDialogClose = (open: boolean) => {
+        setShowSalaryAdvanceDialog(open);
+        if (!open) {
+            // Refresh data when dialog is closed
+            loadAdvances();
         }
     };
 
@@ -97,145 +127,169 @@ export function SalaryAdvancesSection() {
         return groups;
     }, {} as Record<string, SalaryAdvance[]>);
 
-    const handleSalaryAdvanceDialogClose = (open: boolean) => {
-        setShowSalaryAdvanceDialog(open);
-        if (!open) {
-            // Reload advances after dialog closes to refresh the data
-            loadAdvances();
-        }
-    };
-
-    if (!selectedEmployee || !dateRange) {
+    if (!selectedEmployee) {
         return (
-            <Card>
-                <CardContent className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                    <BanknoteIcon className="h-12 w-12 mb-4" />
-                    <p>Select an employee and date range to view salary advances</p>
+            <Card className="mt-4">
+                <CardContent className="pt-6">
+                    <p className="text-center text-muted-foreground">
+                        Select an employee to view salary advances
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (!dateRange?.from || !dateRange?.to) {
+        return (
+            <Card className="mt-4">
+                <CardContent className="pt-6">
+                    <p className="text-center text-muted-foreground">
+                        Select a date range to view salary advances
+                    </p>
                 </CardContent>
             </Card>
         );
     }
 
     return (
-        <>
-            <div className="mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Total Amount Owned
-                        </CardTitle>
-                        <Button
-                            variant="default"
-                            size="sm"
-                            className="flex items-center gap-1"
-                            onClick={() => setShowSalaryAdvanceDialog(true)}
-                        >
-                            <PlusCircle className="h-4 w-4" />
-                            <span>Add Salary Advance</span>
-                        </Button>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{totalAmount}</div>
-                    </CardContent>
-                </Card>
+        <div className="space-y-4 mt-8">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Salary Advances</h3>
+                {adaptedEmployee && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSalaryAdvanceDialog(true)}
+                        className="text-xs sm:text-sm"
+                    >
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        New Advance
+                    </Button>
+                )}
             </div>
 
-            {advances.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="rounded-md border">
+            <Card>
+                <CardContent className="pt-6 overflow-auto">
+                    <div className="overflow-x-auto -mx-6 px-6">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Month</TableHead>
-                                    <TableHead className="text-right">Total Amount</TableHead>
+                                    <TableHead className="text-right">Total</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {Object.entries(groupedAdvances).map(([month, monthAdvances]) => {
-                                    const monthTotal = monthAdvances.reduce(
-                                        (sum, advance) => sum + parseFloat(advance.amount),
-                                        0
-                                    ).toFixed(2);
+                                {Object.entries(groupedAdvances).length > 0 ? (
+                                    Object.entries(groupedAdvances).map(([month, monthAdvances]) => {
+                                        const monthTotal = monthAdvances.reduce((sum, advance) => {
+                                            return sum + parseFloat(advance.amount);
+                                        }, 0);
 
-                                    return (
-                                        <TableRow
-                                            key={month}
-                                            className={cn(
-                                                "cursor-pointer hover:bg-muted/50",
-                                                selectedMonth === month && "bg-muted"
-                                            )}
-                                            onClick={() => handleMonthClick(month, monthAdvances)}
-                                        >
-                                            <TableCell>{month}</TableCell>
-                                            <TableCell className="text-right">₹{monthTotal}</TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                            <TableFooter>
-                                <TableRow>
-                                    <TableCell>Total</TableCell>
-                                    <TableCell className="text-right">₹{totalAmount}</TableCell>
-                                </TableRow>
-                            </TableFooter>
-                        </Table>
-                    </div>
-
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-4 mb-4 text-muted-foreground">
-                            <ChevronRight className="h-5 w-5" />
-                            <span className="font-medium">
-                                {selectedMonth || 'Select a month'}
-                            </span>
-                        </div>
-                        <div className="rounded-md border flex-1">
-                            {selectedMonth ? (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead className="text-right">Amount</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {selectedMonthAdvances.map((advance) => (
-                                            <TableRow key={advance.id}>
-                                                <TableCell>
-                                                    {format(advance.requestDate, 'dd MMM yyyy')}
-                                                </TableCell>
+                                        return (
+                                            <TableRow
+                                                key={month}
+                                                className={cn(
+                                                    "cursor-pointer",
+                                                    selectedMonth === month ? "bg-muted/50" : ""
+                                                )}
+                                                onClick={() => handleMonthClick(month, monthAdvances)}
+                                            >
+                                                <TableCell className="font-medium">{month}</TableCell>
                                                 <TableCell className="text-right">
-                                                    ₹{advance.amount}
+                                                    ${monthTotal.toFixed(2)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <ChevronRight className={cn(
+                                                        "h-4 w-4 transition-transform",
+                                                        selectedMonth === month ? "rotate-90" : ""
+                                                    )} />
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
-                                    <BanknoteIcon className="h-12 w-12 mb-4" />
-                                    <p>Select a month to view details</p>
-                                </div>
+                                        );
+                                    })
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center h-24">
+                                            No salary advances found
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                            {Object.keys(groupedAdvances).length > 0 && (
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell>Total</TableCell>
+                                        <TableCell className="text-right">${totalAmount}</TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                </TableFooter>
                             )}
-                        </div>
+                        </Table>
                     </div>
-                </div>
-            ) : (
+                </CardContent>
+            </Card>
+
+            {selectedMonth && selectedMonthAdvances.length > 0 && (
                 <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                        <BanknoteIcon className="h-12 w-12 mb-4" />
-                        <p>No salary advances to show</p>
+                    <CardContent className="pt-6 overflow-auto">
+                        <div className="text-sm font-medium mb-4">
+                            Advances for {selectedMonth}
+                        </div>
+                        <div className="overflow-x-auto -mx-6 px-6">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Status</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Description</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {selectedMonthAdvances.map((advance) => (
+                                        <TableRow key={advance.id}>
+                                            <TableCell className="font-medium">
+                                                {format(advance.requestDate, "MMM dd, yyyy")}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                ${parseFloat(advance.amount).toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="hidden sm:table-cell">
+                                                <div className="flex items-center">
+                                                    <div
+                                                        className={cn(
+                                                            "h-2 w-2 rounded-full mr-2",
+                                                            advance.status === "APPROVED"
+                                                                ? "bg-green-500"
+                                                                : advance.status === "PENDING"
+                                                                    ? "bg-yellow-500"
+                                                                    : "bg-red-500"
+                                                        )}
+                                                    />
+                                                    {advance.status}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="hidden sm:table-cell">
+                                                {advance.description || "—"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             )}
 
-            {selectedEmployee && (
+            {adaptedEmployee && (
                 <SalaryAdvanceDialog
-                    employee={adaptedEmployee}
                     open={showSalaryAdvanceDialog}
                     onOpenChange={handleSalaryAdvanceDialogClose}
+                    employee={adaptedEmployee}
                     registerId={registerId}
                 />
             )}
-        </>
+        </div>
     );
 } 

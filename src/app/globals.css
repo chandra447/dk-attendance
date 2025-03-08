@@ -2,7 +2,169 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile viewport fixes */
+html {
+  height: 100vh;
+  height: -webkit-fill-available;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  /* Enables pull-to-refresh */
+}
 
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  /* Ensure content is padded for safe areas */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overscroll-behavior-y: contain;
+  /* Enables pull-to-refresh */
+  transition: background-color 0.3s ease;
+}
+
+/* Status bar fixes */
+.status-bar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0);
+  z-index: 9999;
+  pointer-events: none;
+  transition: background-color 0.3s ease;
+}
+
+/* Force repaint hack for iOS */
+.force-repaint {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Light mode */
+html.light .status-bar-overlay {
+  background-color: #ffffff !important;
+}
+
+/* Dark mode */
+html.dark .status-bar-overlay {
+  background-color: #0f1729 !important;
+}
+
+/* System preference overrides */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #0f1729;
+  }
+
+  .status-bar-overlay:not(.light-forced):not(.dark-forced) {
+    background-color: #0f1729;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #ffffff;
+  }
+
+  .status-bar-overlay:not(.light-forced):not(.dark-forced) {
+    background-color: #ffffff;
+  }
+}
+
+/* Ensure theme colors are applied properly */
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Force background color based on theme */
+html.light body {
+  background-color: #ffffff !important;
+}
+
+html.dark body {
+  background-color: #0f1729 !important;
+}
+
+/* Pull to refresh styling */
+.ptr-element {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  color: #0f1729;
+  z-index: 10;
+  text-align: center;
+  height: 50px;
+  transition: all .25s ease;
+}
+
+.ptr-element .ptr-icon {
+  display: inline-block;
+  color: #0f1729;
+  transition: all .25s ease;
+  margin-top: 8px;
+}
+
+.ptr-refresh .ptr-icon {
+  transform: rotate(180deg);
+}
+
+.ptr-loading .ptr-icon {
+  display: none;
+}
+
+.ptr-loading .ptr-spinner {
+  display: block;
+  margin: 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 3px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: ptr-spinner .75s linear infinite;
+}
+
+@keyframes ptr-spinner {
+  0% {
+    transform: rotate(0);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dark mode pull-to-refresh styling */
+@media (prefers-color-scheme: dark) {
+  .ptr-element {
+    color: #ffffff;
+  }
+
+  .ptr-element .ptr-icon {
+    color: #ffffff;
+  }
+}
+
+html.dark .ptr-element {
+  color: #ffffff !important;
+}
+
+html.dark .ptr-element .ptr-icon {
+  color: #ffffff !important;
+}
+
+html.light .ptr-element {
+  color: #0f1729 !important;
+}
+
+html.light .ptr-element .ptr-icon {
+  color: #0f1729 !important;
+}
 
 @layer base {
   :root {
@@ -55,8 +217,7 @@
 
     --chart-5: 27 87% 67%;
 
-    --radius: 0.5rem
-  ;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -72,7 +233,9 @@
 
     --sidebar-border: 220 13% 91%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%
+  }
+
   .dark {
 
     --background: 222.2 84% 4.9%;
@@ -121,8 +284,7 @@
 
     --chart-4: 280 65% 60%;
 
-    --chart-5: 340 75% 55%
-  ;
+    --chart-5: 340 75% 55%;
 
     --sidebar-background: 240 5.9% 10%;
 
@@ -138,7 +300,8 @@
 
     --sidebar-border: 240 3.7% 15.9%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%
+  }
 }
 
 
@@ -147,6 +310,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

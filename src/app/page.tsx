@@ -3,6 +3,10 @@ import { LogIn, LayoutDashboard } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { stackServerApp } from "@/lib/stack";
+import { homeMetadata, defaultViewport } from "./metadata";
+
+export const metadata = homeMetadata;
+export const viewport = defaultViewport;
 
 export default async function Home() {
   const isLoggedIn = await stackServerApp.getUser();

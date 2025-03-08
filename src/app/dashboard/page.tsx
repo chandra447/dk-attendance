@@ -20,6 +20,7 @@ import {
 import { CreateRegisterDialog } from "@/components/dashboard/create-register-dialog";
 import { format } from "date-fns";
 import { FileText, Plus, Trash2 } from "lucide-react";
+import { PullToRefreshWrapper } from "@/components/pull-to-refresh-wrapper";
 
 export default function DashboardPage() {
     const user = useUser();
@@ -91,6 +92,16 @@ export default function DashboardPage() {
         }
     };
 
+    const refreshData = async () => {
+        if (!localUserId) return;
+        try {
+            const userRegisters = await getRegistersByUserId(localUserId);
+            setRegisters(userRegisters);
+        } catch (error) {
+            console.error('Error refreshing registers:', error);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
@@ -100,69 +111,71 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">
-                        Welcome, {user?.displayName || user?.primaryEmail?.split('@')[0]}
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Manage your attendance registers
-                    </p>
-                </div>
-            </div>
-
-            {registers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-[calc(100vh-16rem)] gap-4">
-                    <div className="flex flex-col items-center gap-2 text-center">
-                        <FileText className="h-12 w-12 text-muted-foreground" />
-                        <h3 className="text-lg font-semibold">No Registers</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Get started by creating your first register
+        <PullToRefreshWrapper onRefresh={refreshData}>
+            <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold">
+                            Welcome, {user?.displayName || user?.primaryEmail?.split('@')[0]}
+                        </h1>
+                        <p className="text-muted-foreground">
+                            Manage your attendance registers
                         </p>
                     </div>
-                    <CreateRegisterDialog
-                        isLoading={isCreatingRegister}
-                        onCreateRegister={handleCreateRegister}
-                    />
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {registers.map((register) => (
-                        <Card
-                            key={register.id}
-                            className="hover:bg-muted/50 transition-colors cursor-pointer group relative"
-                        >
-                            <Button
-                                variant="destructive"
-                                size="icon"
-                                className="absolute right-2 top-2"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setRegisterToDelete(register);
-                                }}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <CardHeader onClick={() => router.push(`/dashboard/registers/${register.id}`)}>
-                                <CardTitle>{register.description || 'Untitled Register'}</CardTitle>
-                                <CardDescription>
-                                    Created on {format(new Date(register.date), 'PPP')}
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
-                    ))}
-                    <Card
-                        className="hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center h-[140px]"
-                        onClick={() => document.querySelector<HTMLButtonElement>('[data-create-register]')?.click()}
-                    >
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <Plus className="h-8 w-8" />
-                            <p className="text-sm font-medium">Create New Register</p>
+
+                {registers.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-[calc(100vh-16rem)] gap-4">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                            <FileText className="h-12 w-12 text-muted-foreground" />
+                            <h3 className="text-lg font-semibold">No Registers</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Get started by creating your first register
+                            </p>
                         </div>
-                    </Card>
-                </div>
-            )}
+                        <CreateRegisterDialog
+                            isLoading={isCreatingRegister}
+                            onCreateRegister={handleCreateRegister}
+                        />
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {registers.map((register) => (
+                            <Card
+                                key={register.id}
+                                className="hover:bg-muted/50 transition-colors cursor-pointer group relative"
+                            >
+                                <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute right-2 top-2"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRegisterToDelete(register);
+                                    }}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <CardHeader onClick={() => router.push(`/dashboard/registers/${register.id}`)}>
+                                    <CardTitle>{register.description || 'Untitled Register'}</CardTitle>
+                                    <CardDescription>
+                                        Created on {format(new Date(register.date), 'PPP')}
+                                    </CardDescription>
+                                </CardHeader>
+                            </Card>
+                        ))}
+                        <Card
+                            className="hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center h-[140px]"
+                            onClick={() => document.querySelector<HTMLButtonElement>('[data-create-register]')?.click()}
+                        >
+                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                <Plus className="h-8 w-8" />
+                                <p className="text-sm font-medium">Create New Register</p>
+                            </div>
+                        </Card>
+                    </div>
+                )}
+            </div>
 
             <AlertDialog open={!!registerToDelete} onOpenChange={(open: boolean) => !open && setRegisterToDelete(null)}>
                 <AlertDialogContent>
@@ -185,6 +198,6 @@ export default function DashboardPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </PullToRefreshWrapper>
     );
 } 
