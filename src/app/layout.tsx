@@ -2,11 +2,11 @@ import { StackProvider } from "@stackframe/stack";
 import { stackServerApp } from "@/lib/stack";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import CustomHead from "./head";
+import { defaultMetadata, defaultViewport } from "./metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,48 +18,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "DK Attendance",
-  manifest: "/site.webmanifest",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1729" }
-  ],
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover"
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "DK Attendance"
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any", type: "image/x-icon" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" }
-    ],
-    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
-    other: [
-      {
-        rel: "android-chrome-192x192",
-        url: "/android-chrome-192x192.png",
-        sizes: "192x192",
-        type: "image/png"
-      },
-      {
-        rel: "android-chrome-512x512",
-        url: "/android-chrome-512x512.png",
-        sizes: "512x512",
-        type: "image/png"
-      }
-    ]
-  },
-};
+export const viewport = defaultViewport;
+export const metadata = defaultMetadata;
 
 export default function RootLayout({
   children,
@@ -71,13 +31,15 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <CustomHead />
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1729" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        {/* iOS status bar elements */}
+        <div className="ios-status-bar-light"></div>
+        <div className="ios-status-bar-dark"></div>
+
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
