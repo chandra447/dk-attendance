@@ -9,9 +9,10 @@ export default function CustomHead() {
             <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
             {/* Status bar appearance for iOS */}
-            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-            {/* Theme colors for browser UI */}
+            {/* Theme colors for browser UI - these will be dynamically updated by JavaScript */}
+            <meta name="theme-color" content="#ffffff" />
             <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
             <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1729" />
 

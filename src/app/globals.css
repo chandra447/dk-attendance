@@ -30,16 +30,25 @@ body {
   height: env(safe-area-inset-top, 0);
   z-index: 9999;
   pointer-events: none;
+  transition: background-color 0.3s ease;
+}
+
+/* Force repaint hack for iOS */
+.force-repaint {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Light mode */
 html.light .status-bar-overlay {
-  background-color: #ffffff;
+  background-color: #ffffff !important;
 }
 
 /* Dark mode */
 html.dark .status-bar-overlay {
-  background-color: #0f1729;
+  background-color: #0f1729 !important;
 }
 
 /* System preference overrides */
