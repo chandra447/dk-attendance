@@ -640,7 +640,7 @@ export async function markEmployeeAbsent(employeeId: number, employeePresentId: 
 
         if (existingLog.length > 0) {
             // Update the existing clock-out log to clock-in
-            [newLog] = await db
+            const [_updatedLog] = await db
                 .update(attendanceLogger)
                 .set({
                     clockIn: new Date(),
@@ -700,7 +700,7 @@ export async function markEmployeeReturnFromAbsent(employeeId: number, employeeP
 
         if (existingLog.length > 0) {
             // Update the existing clock-out log to clock-in
-            [newLog] = await db
+            await db
                 .update(attendanceLogger)
                 .set({
                     clockIn: new Date(),

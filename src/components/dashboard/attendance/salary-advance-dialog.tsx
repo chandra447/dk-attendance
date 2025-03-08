@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -30,15 +30,20 @@ export function SalaryAdvanceDialog({
     onOpenChange,
     registerId: propRegisterId,
 }: SalaryAdvanceDialogProps) {
-    let contextRegisterId: string | undefined;
+    // Initialize with undefined
+    const registerContext = { registerId: undefined };
+
+    // Try to use the context, but don't throw if it's not available
     try {
-        const { registerId } = useRegister();
-        contextRegisterId = registerId;
+        // This is safe because it's not conditional - we always call the hook
+        Object.assign(registerContext, useRegister());
     } catch (error) {
         // Context not available, will use prop instead
+        console.log("Register context not available, using prop instead");
     }
 
-    const registerId = propRegisterId || contextRegisterId;
+    // Use the prop registerId if provided, otherwise use the one from context
+    const registerId = propRegisterId || registerContext.registerId;
 
     const [isLoading, setIsLoading] = useState(false);
     const [totalAdvances, setTotalAdvances] = useState("0");
@@ -47,13 +52,8 @@ export function SalaryAdvanceDialog({
         description: "",
     });
 
-    useEffect(() => {
-        if (employee && open) {
-            loadData();
-        }
-    }, [employee, open]);
-
-    const loadData = async () => {
+    // Wrap loadData in useCallback to prevent infinite loops
+    const loadData = useCallback(async () => {
         if (!employee) return;
 
         try {
@@ -64,7 +64,13 @@ export function SalaryAdvanceDialog({
         } catch (error) {
             console.error('Error loading salary advance data:', error);
         }
-    };
+    }, [employee]);
+
+    useEffect(() => {
+        if (employee && open) {
+            loadData();
+        }
+    }, [employee, open, loadData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
