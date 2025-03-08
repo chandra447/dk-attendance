@@ -261,6 +261,14 @@ export function EmployeeCard({
             }
             if ('data' in result && result.data) {
                 const { presentRecord: updatedPresent, log: newLog } = result.data;
+
+                // Make sure newLog exists before using it
+                if (!newLog) {
+                    console.error("No log returned from markEmployeeReturnFromAbsent");
+                    toast.error("Failed to mark employee return: No log data");
+                    return;
+                }
+
                 // Update the present record with the new status
                 const newPresentRecord = {
                     ...updatedPresent,
@@ -268,15 +276,20 @@ export function EmployeeCard({
                     createdAt: new Date(updatedPresent.createdAt),
                     updatedAt: new Date(updatedPresent.updatedAt)
                 };
-                // Add the new log to the logs array
-                const newLogs = [
-                    {
-                        ...newLog,
-                        clockIn: newLog.clockIn ? new Date(newLog.clockIn) : null,
-                        clockOut: newLog.clockOut ? new Date(newLog.clockOut) : null
-                    },
-                    ...logs
-                ];
+
+                // Add the new log to the logs array with proper typing
+                const newLogWithDates: AttendanceLog = {
+                    id: newLog.id,
+                    employeeId: newLog.employeeId,
+                    employeePresentId: newLog.employeePresentId,
+                    clockIn: newLog.clockIn ? new Date(newLog.clockIn) : null,
+                    clockOut: newLog.clockOut ? new Date(newLog.clockOut) : null,
+                    status: newLog.status,
+                    notes: newLog.notes
+                };
+
+                const newLogs = [newLogWithDates, ...logs];
+
                 onUpdateStatus(newPresentRecord, newLogs);
                 onStatusChange(employee.id);
                 toast.success("Employee marked as returned");
@@ -326,22 +339,22 @@ export function EmployeeCard({
                     </DropdownMenu>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
                             <h3 className={cn(
-                                "font-semibold text-lg",
+                                "font-semibold text-base sm:text-lg truncate max-w-[180px] sm:max-w-none",
                                 isOvertime && "text-red-500"
                             )}>
                                 {employee.name}
                             </h3>
                             {presentRecord && presentRecord.status === 'present' ? (
-                                <UserRoundCheck className="h-5 w-5 text-green-500" />
+                                <UserRoundCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
                             ) : (
-                                <UserRoundX className="h-5 w-5 text-red-500" />
+                                <UserRoundX className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 flex-shrink-0" />
                             )}
                         </div>
-                        <div className="text-sm text-muted-foreground h-5">
+                        <div className="text-xs sm:text-sm text-muted-foreground h-5 truncate">
                             {presentRecord ? (
                                 hasReturnedFromAbsence ?
                                     "Returned from absence - done for today" :
@@ -351,12 +364,12 @@ export function EmployeeCard({
                             )}
                         </div>
                         {lastLog?.status === 'clock-out' && !hasReturnedFromAbsence ? (
-                            <div className="text-sm font-mono text-red-500">
+                            <div className="text-xs sm:text-sm font-mono text-red-500">
                                 Clocked out for: {clockOutDuration}
                             </div>
                         ) : (
                             <div className={cn(
-                                "text-sm font-mono",
+                                "text-xs sm:text-sm font-mono",
                                 isOvertime && "text-red-500"
                             )}>
                                 Total Duration: {`${Math.floor(Math.abs(totalMinutes) / 60).toString().padStart(2, '0')}:${(Math.abs(totalMinutes) % 60).toString().padStart(2, '0')}`}
@@ -370,12 +383,12 @@ export function EmployeeCard({
                                 onClick={handlePresent}
                                 disabled={isLoading || !!presentRecord}
                                 variant={presentRecord ? "secondary" : "default"}
-                                className="rounded-full"
+                                className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
                                 size="sm"
                             >
                                 {isLoading ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    <div className="flex items-center gap-1 sm:gap-2">
+                                        <div className="h-3 w-3 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                                         <span>Loading...</span>
                                     </div>
                                 ) : presentRecord ? "Present" : "Mark Present"}
@@ -385,7 +398,7 @@ export function EmployeeCard({
                                     onClick={handleAbsent}
                                     variant="destructive"
                                     size="sm"
-                                    className="rounded-full"
+                                    className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
                                 >
                                     Mark Absent
                                 </Button>
@@ -395,33 +408,45 @@ export function EmployeeCard({
                                     onClick={handleReturn}
                                     variant="default"
                                     size="sm"
-                                    className="rounded-full"
+                                    className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
                                 >
                                     Mark Return
                                 </Button>
                             )}
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Button
-                                onClick={handleClockIn}
-                                disabled={isLoading || !shouldEnableClockIn || hasReturnedFromAbsence}
-                                variant="outline"
-                                size="sm"
-                            >
-                                {isLoading && shouldEnableClockIn ? (
-                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                ) : "Clock In"}
-                            </Button>
-                            <Button
-                                onClick={handleClockOut}
-                                disabled={isLoading || !shouldEnableClockOut}
-                                variant="outline"
-                                size="sm"
-                            >
-                                {isLoading && shouldEnableClockOut ? (
-                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                ) : "Clock Out"}
-                            </Button>
+                            {presentRecord?.status === 'present' && !hasReturnedFromAbsence && (
+                                <>
+                                    {lastLog?.status === 'clock-in' ? (
+                                        <Button
+                                            onClick={handleClockOut}
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                        >
+                                            Clock Out
+                                        </Button>
+                                    ) : lastLog?.status === 'clock-out' ? (
+                                        <Button
+                                            onClick={handleClockIn}
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                        >
+                                            Clock In
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleClockIn}
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                        >
+                                            Clock In
+                                        </Button>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
