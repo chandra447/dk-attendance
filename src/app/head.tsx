@@ -9,7 +9,7 @@ export default function CustomHead() {
             <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
             {/* Status bar appearance for iOS */}
-            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
             {/* Theme colors for browser UI */}
             <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
@@ -17,6 +17,11 @@ export default function CustomHead() {
 
             {/* Prevent telephone number detection */}
             <meta name="format-detection" content="telephone=no" />
+
+            {/* Apple touch icons */}
+            <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+            <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png" />
+            <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         </>
     );
 } 
