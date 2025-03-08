@@ -395,7 +395,7 @@ export function EmployeeCard({
                                     </div>
                                 ) : presentRecord ? "Present" : "Mark Present"}
                             </Button>
-                            {presentRecord?.status === 'present' && (
+                            {presentRecord?.status === 'present' && (!lastLog || lastLog.status !== 'clock-out') && (
                                 <Button
                                     onClick={handleAbsent}
                                     variant="destructive"
@@ -419,7 +419,16 @@ export function EmployeeCard({
                         <div className="flex flex-col gap-2">
                             {presentRecord?.status === 'present' && (
                                 <>
-                                    {lastLog?.status === 'clock-out' ? (
+                                    {lastLog?.status === 'clock-in' ? (
+                                        <Button
+                                            onClick={handleClockOut}
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                        >
+                                            Clock Out
+                                        </Button>
+                                    ) : lastLog?.status === 'clock-out' ? (
                                         <Button
                                             onClick={handleClockIn}
                                             variant="outline"
@@ -430,12 +439,12 @@ export function EmployeeCard({
                                         </Button>
                                     ) : (
                                         <Button
-                                            onClick={handleClockOut}
+                                            onClick={handleClockIn}
                                             variant="outline"
                                             size="sm"
                                             className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
                                         >
-                                            Clock Out
+                                            Clock In
                                         </Button>
                                     )}
                                 </>
