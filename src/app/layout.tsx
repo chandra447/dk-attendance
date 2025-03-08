@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
+import CustomHead from "./head";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,8 +19,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DK-stores",
+  title: "DK Attendance",
   manifest: "/site.webmanifest",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1729" }
+  ],
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover"
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "DK Attendance"
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any", type: "image/x-icon" },
@@ -53,6 +70,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <CustomHead />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
