@@ -5,7 +5,7 @@ export default {
     out: "./src/app/db/migrations",
     driver: "neon-http",
     dbCredentials: {
-        connectionString: process.env.POSTGRES_URL!,
+        connectionString: process.env.DATABASE_URL!,
     },
     tablesFilter: ["!libsql_wasm_func_table"],
     dialect: "postgresql",
