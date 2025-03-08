@@ -102,11 +102,13 @@ export function EmployeeCard({
                 const diffInMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60));
                 totalMinutes += Math.abs(diffInMinutes);
             } else if (log.status === 'clock-out' && log.clockOut) {
-                // For ongoing clock-out periods
+                // For ongoing clock-out periods (negative because employee is clocked out)
                 const clockOutTime = new Date(log.clockOut);
                 const now = new Date();
                 const diffInMinutes = Math.floor((now.getTime() - clockOutTime.getTime()) / (1000 * 60));
-                totalMinutes += diffInMinutes;
+                // We don't add clock-out time to total duration
+                // This was causing negative durations in the UI
+                // totalMinutes += diffInMinutes;
             }
         });
 

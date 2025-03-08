@@ -15,6 +15,7 @@ import { format, startOfDay } from "date-fns";
 import { getEmployeeAttendanceLogs } from "@/app/actions/register";
 import { cn } from "@/lib/utils";
 import { formatMinutes } from "@/components/dashboard/utils/attendance-utils";
+import { formatDuration } from "@/components/dashboard/utils/attendance-utils";
 import { useReports } from "../context/reports-context";
 
 interface AttendanceLog {
@@ -82,7 +83,7 @@ export function AttendanceLogsSection() {
                     logs.forEach(log => {
                         if (log.clockIn && log.clockOut) {
                             const duration = Math.floor((log.clockOut.getTime() - log.clockIn.getTime()) / (1000 * 60));
-                            totalDuration += duration;
+                            totalDuration += Math.abs(duration);
                         }
                     });
 
@@ -215,9 +216,10 @@ export function AttendanceLogsSection() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[100px]">Time</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="hidden sm:table-cell">Notes</TableHead>
+                                        <TableHead className="w-[100px]">Clock In</TableHead>
+                                        <TableHead className="w-[100px]">Clock Out</TableHead>
+                                        <TableHead className="w-[100px]">Duration</TableHead>
+                                        <TableHead>Notes</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -226,30 +228,17 @@ export function AttendanceLogsSection() {
                                             <TableCell className="font-medium">
                                                 {log.clockIn
                                                     ? format(log.clockIn, "hh:mm a")
-                                                    : log.clockOut
-                                                        ? format(log.clockOut, "hh:mm a")
-                                                        : "N/A"}
+                                                    : "—"}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center">
-                                                    <div
-                                                        className={cn(
-                                                            "h-2 w-2 rounded-full mr-2",
-                                                            log.status === "CLOCK_IN"
-                                                                ? "bg-green-500"
-                                                                : log.status === "CLOCK_OUT"
-                                                                    ? "bg-yellow-500"
-                                                                    : "bg-gray-500"
-                                                        )}
-                                                    />
-                                                    {log.status === "CLOCK_IN"
-                                                        ? "Clock In"
-                                                        : log.status === "CLOCK_OUT"
-                                                            ? "Clock Out"
-                                                            : log.status}
-                                                </div>
+                                                {log.clockOut
+                                                    ? format(log.clockOut, "hh:mm a")
+                                                    : "—"}
                                             </TableCell>
-                                            <TableCell className="hidden sm:table-cell">
+                                            <TableCell>
+                                                {formatDuration(log.clockIn, log.clockOut)}
+                                            </TableCell>
+                                            <TableCell>
                                                 {log.notes || "—"}
                                             </TableCell>
                                         </TableRow>

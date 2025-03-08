@@ -155,12 +155,14 @@ export function AttendanceLogDrawer({
                     // If both clock-in and clock-out exist, calculate normal duration
                     const clockInTime = new Date(log.clockIn);
                     const diffInMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60));
-                    totalMinutes += diffInMinutes;
+                    // Use Math.abs to ensure we always get a positive duration
+                    totalMinutes += Math.abs(diffInMinutes);
                 } else {
-                    // If only clock-out exists, calculate duration from clock-out to current time
-                    const now = new Date();
-                    const diffInMinutes = Math.floor((now.getTime() - clockOutTime.getTime()) / (1000 * 60));
-                    totalMinutes += diffInMinutes;
+                    // If only clock-out exists, we don't add this to the total duration
+                    // This was causing negative durations in the UI
+                    // const now = new Date();
+                    // const diffInMinutes = Math.floor((now.getTime() - clockOutTime.getTime()) / (1000 * 60));
+                    // totalMinutes += diffInMinutes;
                 }
             }
         });
