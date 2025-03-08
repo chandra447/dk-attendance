@@ -30,12 +30,30 @@ export function LoginForm() {
         try {
             const result = await app.signInWithCredential({ email, password });
             if (result.status === 'error') {
-                setError(result.error.message);
+                if (result.error.message && result.error.message.includes('REDIRECT_URL_NOT_WHITELISTED')) {
+                    setError('Authentication error: The current domain is not authorized for login. Please add this domain to the trusted domains list in the Stack Auth dashboard, or access the application from an authorized domain.');
+                } else {
+                    setError(result.error.message);
+                }
             } else {
                 router.push('/dashboard');
             }
-        } catch (err) {
-            setError('An unexpected error occurred');
+        } catch (err: any) {
+            console.error('Login error:', err);
+            // Check for redirect URL whitelist errors
+            if (err.message && err.message.includes('REDIRECT_URL_NOT_WHITELISTED')) {
+                setError('Authentication error: The current domain is not authorized for login. Please add this domain to the trusted domains list in the Stack Auth dashboard, or access the application from an authorized domain.');
+            }
+            // Check for crypto-related errors
+            else if (err.message && (
+                err.message.includes('crypto') ||
+                err.message.includes('subtle') ||
+                err.message.includes('undefined is not an object')
+            )) {
+                setError('Authentication error: Your browser may not support required security features. Please try a different browser or use email login.');
+            } else {
+                setError('An unexpected error occurred: ' + (err.message || 'Unknown error'));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -51,10 +69,19 @@ export function LoginForm() {
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="w-full">
-                    <OAuthButton
-                        provider="google"
-                        type="sign-in"
-                    />
+                    {typeof window !== 'undefined' && typeof window.crypto !== 'undefined' && typeof window.crypto.subtle !== 'undefined' ? (
+                        <>
+                            <OAuthButton
+                                provider="google"
+                                type="sign-in"
+                            />
+
+                        </>
+                    ) : (
+                        <div className="p-2 text-center text-sm text-red-500 border border-red-200 rounded-md">
+                            Google login is not available on this device or browser. Please use email login instead.
+                        </div>
+                    )}
                 </div>
 
                 <div className="relative">

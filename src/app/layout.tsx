@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +59,30 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        <Script id="crypto-polyfill" strategy="beforeInteractive">
+          {`
+            // Polyfill for crypto.subtle in browsers that don't support it
+            if (typeof window !== 'undefined' && (!window.crypto || !window.crypto.subtle)) {
+              try {
+                // Simple fallback for basic functionality
+                window.crypto = window.crypto || {};
+                window.crypto.subtle = window.crypto.subtle || {};
+                
+                if (!window.crypto.subtle.digest) {
+                  // This is a very simplified fallback and not secure for production
+                  // It's just to prevent the app from crashing
+                  window.crypto.subtle.digest = async function(algorithm, data) {
+                    console.warn('Using insecure crypto.subtle.digest polyfill');
+                    // Return a dummy ArrayBuffer
+                    return new ArrayBuffer(32);
+                  };
+                }
+              } catch (e) {
+                console.error('Failed to polyfill crypto API:', e);
+              }
+            }
+          `}
+        </Script>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
