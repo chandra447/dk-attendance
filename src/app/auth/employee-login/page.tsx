@@ -14,6 +14,12 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import {
+    InputOTP,
+    InputOTPGroup,
+    InputOTPSlot,
+    InputOTPSeparator
+} from "@/components/ui/input-otp";
 
 export default function EmployeeLoginPage() {
     const [name, setName] = useState('');
@@ -112,14 +118,27 @@ export default function EmployeeLoginPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="pin">PIN</Label>
-                                        <Input
-                                            id="pin"
-                                            type="password"
-                                            value={pin}
-                                            onChange={(e) => setPin(e.target.value)}
-                                            required
-                                            maxLength={5}
-                                        />
+                                        <div className="flex justify-center">
+                                            <InputOTP
+                                                maxLength={5}
+                                                value={pin}
+                                                onChange={setPin}
+                                            >
+                                                <InputOTPGroup>
+                                                    <InputOTPSlot index={0} />
+                                                    <InputOTPSlot index={1} />
+                                                    <InputOTPSlot index={2} />
+                                                </InputOTPGroup>
+                                                <InputOTPSeparator />
+                                                <InputOTPGroup>
+                                                    <InputOTPSlot index={3} />
+                                                    <InputOTPSlot index={4} />
+                                                </InputOTPGroup>
+                                            </InputOTP>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1 text-center">
+                                            Enter your 5-digit PIN
+                                        </p>
                                     </div>
                                     {error && (
                                         <div className="text-sm text-red-500">
