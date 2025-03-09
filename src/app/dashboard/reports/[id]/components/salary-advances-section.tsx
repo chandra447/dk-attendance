@@ -36,6 +36,7 @@ export function SalaryAdvancesSection() {
     const { selectedEmployee, dateRange } = useReports();
     const [advances, setAdvances] = useState<SalaryAdvance[]>([]);
     const [totalAmount, setTotalAmount] = useState("0");
+    const [previousAdvancesTotal, setPreviousAdvancesTotal] = useState("0");
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [selectedMonthAdvances, setSelectedMonthAdvances] = useState<SalaryAdvance[]>([]);
     const [showSalaryAdvanceDialog, setShowSalaryAdvanceDialog] = useState(false);
@@ -55,6 +56,7 @@ export function SalaryAdvancesSection() {
         } else {
             setAdvances([]);
             setTotalAmount("0");
+            setPreviousAdvancesTotal("0");
             setSelectedMonth(null);
             setSelectedMonthAdvances([]);
         }
@@ -82,11 +84,23 @@ export function SalaryAdvancesSection() {
                         advance.requestDate <= toDate;
                 });
 
+                // Calculate previous advances (before the date range)
+                const previousAdvances = advancesList.filter(advance => {
+                    const fromDate = dateRange.from as Date;
+                    return advance.requestDate < fromDate;
+                });
+
+                // Calculate total of previous advances
+                const previousTotal = previousAdvances.reduce((sum, advance) => {
+                    return sum + parseFloat(advance.amount);
+                }, 0);
+                setPreviousAdvancesTotal(previousTotal.toFixed(2));
+
                 // Sort by date (newest first)
                 filteredAdvances.sort((a, b) => b.requestDate.getTime() - a.requestDate.getTime());
                 setAdvances(filteredAdvances);
 
-                // Calculate total amount
+                // Calculate total amount for the selected range
                 const total = filteredAdvances.reduce((sum, advance) => {
                     return sum + parseFloat(advance.amount);
                 }, 0);
@@ -197,7 +211,7 @@ export function SalaryAdvancesSection() {
                                             >
                                                 <TableCell className="font-medium">{month}</TableCell>
                                                 <TableCell className="text-right">
-                                                    ${monthTotal.toFixed(2)}
+                                                    ₹{monthTotal.toFixed(2)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <ChevronRight className={cn(
@@ -216,11 +230,29 @@ export function SalaryAdvancesSection() {
                                     </TableRow>
                                 )}
                             </TableBody>
-                            {Object.keys(groupedAdvances).length > 0 && (
+                            {/* Always show the footer with totals, even when there are no advances in the selected range */}
+                            {selectedEmployee && dateRange?.from && (
                                 <TableFooter>
                                     <TableRow>
-                                        <TableCell>Total</TableCell>
-                                        <TableCell className="text-right">${totalAmount}</TableCell>
+                                        <TableCell>Selected Range Total</TableCell>
+                                        <TableCell className="text-right">₹{totalAmount}</TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                        <TableCell>
+                                            Previous Advances
+                                            <span className="text-xs text-muted-foreground block">
+                                                (Before {format(dateRange.from, 'MMM dd, yyyy')})
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right">₹{previousAdvancesTotal}</TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                        <TableCell className="font-bold">Grand Total</TableCell>
+                                        <TableCell className="text-right font-bold">
+                                            ₹{(parseFloat(totalAmount) + parseFloat(previousAdvancesTotal)).toFixed(2)}
+                                        </TableCell>
                                         <TableCell></TableCell>
                                     </TableRow>
                                 </TableFooter>
@@ -253,7 +285,7 @@ export function SalaryAdvancesSection() {
                                                 {format(advance.requestDate, "MMM dd, yyyy")}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                ${parseFloat(advance.amount).toFixed(2)}
+                                                ₹{parseFloat(advance.amount).toFixed(2)}
                                             </TableCell>
                                             <TableCell className="hidden sm:table-cell">
                                                 <div className="flex items-center">

@@ -194,11 +194,12 @@ export function AttendanceLogDrawer({
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
             <DrawerContent className="h-[60vh]">
-                <DrawerHeader className="pb-2">
+                <DrawerHeader className="text-left">
                     <DrawerTitle className={cn(
+                        "text-xl font-semibold",
                         isOvertime && "text-red-500"
                     )}>
-                        Attendance Logs - {employee.name}
+                        Attendance Logs - {employee.name} ({logs.length} {logs.length === 1 ? 'entry' : 'entries'})
                     </DrawerTitle>
                     <DrawerDescription>
                         {format(date, 'EEEE, MMMM d, yyyy')}
