@@ -49,6 +49,7 @@ export function EmployeeCard({
     const lastLog = logs.length > 0 ? logs[0] : null;
     const router = useRouter();
 
+
     // Check if employee has returned from absence today
     const hasReturnedFromAbsence = logs.some(log =>
         log.notes === 'Returned from absence' &&
@@ -211,9 +212,20 @@ export function EmployeeCard({
         }
     };
 
-    // Determine button states based on present record, last log, and return status
-    const shouldEnableClockIn = presentRecord && lastLog?.status === 'clock-out';
-    const shouldEnableClockOut = presentRecord && (!lastLog || lastLog.status === 'clock-in');
+    // Helper variables for button visibility logic
+    const isPresent = presentRecord?.status === 'present';
+    const isAbsent = presentRecord?.status === 'absent';
+    const isLastLogClockIn = lastLog?.status === 'clock-in';
+    const isLastLogClockOut = lastLog?.status === 'clock-out';
+
+    // Show Mark Absent only when employee is present AND either has no logs OR last log is clock-in
+    const showMarkAbsentButton = isPresent && (!lastLog || isLastLogClockIn);
+
+    // Show Clock Out button when employee is present AND (last log is clock-in OR no logs)
+    const showClockOutButton = isPresent && (isLastLogClockIn || !lastLog);
+
+    // Show Clock In button only when employee is present AND last log is clock-out
+    const showClockInButton = isPresent && isLastLogClockOut;
 
     const handleUpdateLogs = (updatedLogs: AttendanceLog[]) => {
         onUpdateStatus(presentRecord, updatedLogs);
@@ -419,7 +431,8 @@ export function EmployeeCard({
                         <div className="flex flex-col gap-2">
                             {presentRecord?.status === 'present' && (
                                 <>
-                                    {lastLog?.status === 'clock-in' ? (
+                                    {/* If employee is present and either has no logs OR last log is clock-in, show Clock Out button */}
+                                    {showClockOutButton && (
                                         <Button
                                             onClick={handleClockOut}
                                             variant="outline"
@@ -428,16 +441,9 @@ export function EmployeeCard({
                                         >
                                             Clock Out
                                         </Button>
-                                    ) : lastLog?.status === 'clock-out' ? (
-                                        <Button
-                                            onClick={handleClockIn}
-                                            variant="outline"
-                                            size="sm"
-                                            className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
-                                        >
-                                            Clock In
-                                        </Button>
-                                    ) : (
+                                    )}
+                                    {/* If employee is present AND last log is clock-out, show Clock In button */}
+                                    {showClockInButton && (
                                         <Button
                                             onClick={handleClockIn}
                                             variant="outline"

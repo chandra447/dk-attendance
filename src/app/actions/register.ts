@@ -832,4 +832,16 @@ export async function getAllEmployees(registerId: number) {
         console.error("Error fetching employees:", error);
         return { error: "Failed to fetch employees" };
     }
+}
+
+export async function getRegisterById(registerId: number) {
+    try {
+        const register = await db.query.registers.findFirst({
+            where: eq(registers.id, registerId),
+        });
+        return register;
+    } catch (error) {
+        console.error('Error getting register by ID:', error);
+        return null;
+    }
 } 
