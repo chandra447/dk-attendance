@@ -197,7 +197,7 @@ export function SalaryAdvancesSection() {
                                             >
                                                 <TableCell className="font-medium">{month}</TableCell>
                                                 <TableCell className="text-right">
-                                                    ${monthTotal.toFixed(2)}
+                                                    ₹{monthTotal.toFixed(2)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <ChevronRight className={cn(
@@ -220,7 +220,7 @@ export function SalaryAdvancesSection() {
                                 <TableFooter>
                                     <TableRow>
                                         <TableCell>Total</TableCell>
-                                        <TableCell className="text-right">${totalAmount}</TableCell>
+                                        <TableCell className="text-right">₹{totalAmount}</TableCell>
                                         <TableCell></TableCell>
                                     </TableRow>
                                 </TableFooter>
@@ -253,7 +253,7 @@ export function SalaryAdvancesSection() {
                                                 {format(advance.requestDate, "MMM dd, yyyy")}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                ${parseFloat(advance.amount).toFixed(2)}
+                                                ₹{parseFloat(advance.amount).toFixed(2)}
                                             </TableCell>
                                             <TableCell className="hidden sm:table-cell">
                                                 <div className="flex items-center">
