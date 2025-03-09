@@ -34,6 +34,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         const [date, setDate] = useState<Date>(new Date());
         const [isLoading, setIsLoading] = useState(true);
         const [registerStartTime, setRegisterStartTime] = useState<Date | null>(null);
+        const [currentUserPosition, setCurrentUserPosition] = useState<string>('employee');
 
         const fetchRegisterStartTime = async () => {
             console.log('Fetching register start time...');
@@ -275,6 +276,31 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
             }
         }));
 
+        useEffect(() => {
+            // Fetch current user's position if in employee view
+            const fetchCurrentUserPosition = async () => {
+                if (isEmployee) {
+                    try {
+                        const response = await fetch('/api/employee/me');
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.employee && data.employee.position) {
+                                console.log('Current user position:', data.employee.position);
+                                setCurrentUserPosition(data.employee.position);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching current user position:', error);
+                    }
+                } else {
+                    // If not in employee view, set position to admin
+                    setCurrentUserPosition('admin');
+                }
+            };
+
+            fetchCurrentUserPosition();
+        }, [isEmployee]);
+
         if (isLoading) {
             return (
                 <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] gap-4">
@@ -447,6 +473,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                                             updateEmployeeStatus(employee.id, presentRecord, logs);
                                         }}
                                         registerStartTime={registerStartTime}
+                                        currentUserPosition={currentUserPosition}
                                     />
                                 </div>
                             ))

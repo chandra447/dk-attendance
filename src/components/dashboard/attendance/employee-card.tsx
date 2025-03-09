@@ -29,6 +29,7 @@ interface EmployeeCardProps {
     onLoadingChange: (isLoading: boolean) => void;
     onUpdateStatus: (presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => void;
     registerStartTime: Date | null;
+    currentUserPosition?: string;
 }
 
 export function EmployeeCard({
@@ -40,7 +41,8 @@ export function EmployeeCard({
     onStatusChange,
     onLoadingChange,
     onUpdateStatus,
-    registerStartTime
+    registerStartTime,
+    currentUserPosition = 'employee'
 }: EmployeeCardProps) {
     const [showLogDrawer, setShowLogDrawer] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
@@ -49,6 +51,7 @@ export function EmployeeCard({
     const lastLog = logs.length > 0 ? logs[0] : null;
     const router = useRouter();
 
+    console.log('EmployeeCard - currentUserPosition:', currentUserPosition, 'for employee:', employee.name);
 
     // Check if employee has returned from absence today
     const hasReturnedFromAbsence = logs.some(log =>
@@ -343,12 +346,17 @@ export function EmployeeCard({
                             <DropdownMenuItem onClick={() => setShowLogDrawer(true)}>
                                 View Logs
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
-                                Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowSalaryAdvanceDialog(true)}>
-                                Salary Advance
-                            </DropdownMenuItem>
+                            {/* Only show Edit and Salary Advance options for admin users, not for any employee (including supervisors) */}
+                            {currentUserPosition !== 'supervisor' && (
+                                <>
+                                    <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+                                        Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setShowSalaryAdvanceDialog(true)}>
+                                        Salary Advance
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
