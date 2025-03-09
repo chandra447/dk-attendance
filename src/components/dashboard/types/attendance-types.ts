@@ -13,6 +13,7 @@ export interface Employee {
 export interface EmployeeListProps {
     registerId: string;
     registerName: string;
+    isEmployee?: boolean;
 }
 
 export interface EmployeePresent {

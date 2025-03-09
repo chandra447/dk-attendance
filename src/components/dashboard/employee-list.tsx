@@ -23,7 +23,7 @@ export interface EmployeeListRef {
 }
 
 export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
-    function EmployeeList({ registerId, registerName }: EmployeeListProps, ref) {
+    function EmployeeList({ registerId, registerName, isEmployee = false }: EmployeeListProps, ref) {
         const [employees, setEmployees] = useState<Employee[]>([]);
         const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
         const [searchQuery, setSearchQuery] = useState('');
@@ -398,11 +398,13 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                                         />
                                     </PopoverContent>
                                 </Popover>
-                                <CreateEmployeeDialog
-                                    registerId={registerId}
-                                    registerName={registerName}
-                                    onEmployeeUpdate={handleEmployeeUpdate}
-                                />
+                                {!isEmployee && (
+                                    <CreateEmployeeDialog
+                                        registerId={registerId}
+                                        registerName={registerName}
+                                        onEmployeeUpdate={handleEmployeeUpdate}
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>

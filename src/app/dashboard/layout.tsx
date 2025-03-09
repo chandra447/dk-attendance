@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-function DashboardHeader() {
+function DashboardHeader({ isAdmin = true }: { isAdmin?: boolean }) {
     const user = useUser();
     const router = useRouter();
     const pathname = usePathname();
@@ -30,11 +30,45 @@ function DashboardHeader() {
     const [isLoading, setIsLoading] = useState(true);
     const [isCreatingRegister, setIsCreatingRegister] = useState(false);
     const [localUserId, setLocalUserId] = useState<number | null>(null);
+    const [isEmployeeView, setIsEmployeeView] = useState(false);
+    const [isAdminView, setIsAdminView] = useState(true);
 
     const showRegisterSelector = pathname !== '/dashboard';
 
     useEffect(() => {
+        // Check if this is an employee view and admin status
+        const checkViewStatus = () => {
+            const isEmployee = window.localStorage.getItem('isEmployeeView') === 'true';
+            const isAdminStorage = window.localStorage.getItem('isAdmin');
+
+            // If isEmployeeView is false, ensure isAdminView is true
+            const isAdmin = isEmployee ? false : (isAdminStorage !== 'false');
+
+            setIsEmployeeView(isEmployee);
+            setIsAdminView(isAdmin);
+        };
+
+        checkViewStatus();
+
+        // Listen for storage changes in case the flags change
+        const handleStorageChange = () => {
+            checkViewStatus();
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, []);
+
+    useEffect(() => {
         async function initializeUser() {
+            if (isEmployeeView) {
+                setIsLoading(false);
+                return;
+            }
+
             if (!user?.id || !user.primaryEmail) return;
             setIsLoading(true);
             try {
@@ -66,7 +100,7 @@ function DashboardHeader() {
             }
         }
         initializeUser();
-    }, [user?.id, user?.primaryEmail, user?.displayName, pathname]);
+    }, [user?.id, user?.primaryEmail, user?.displayName, pathname, isEmployeeView]);
 
     const handleRegisterChange = (value: string) => {
         setSelectedRegisterId(value);
@@ -106,6 +140,39 @@ function DashboardHeader() {
         }
     };
 
+    // Add function to handle employee logout
+    const handleEmployeeLogout = async () => {
+        try {
+            // First clear the employee token
+            await fetch('/api/auth/employee-logout', { method: 'POST' });
+
+            // Clear localStorage flags
+            window.localStorage.removeItem('isEmployeeView');
+            window.localStorage.setItem('isAdmin', 'true'); // Reset to admin view
+
+            // Dispatch storage event to notify other components
+            window.dispatchEvent(new Event('storage'));
+
+            // Then redirect to auth page
+            router.push('/auth');
+        } catch (error) {
+            console.error('Error logging out employee:', error);
+        }
+    };
+
+    // Add function to handle admin logout
+    const handleAdminLogout = () => {
+        // Clear any localStorage flags
+        window.localStorage.removeItem('isEmployeeView');
+        window.localStorage.setItem('isAdmin', 'true'); // Reset to admin view
+
+        // Dispatch storage event to notify other components
+        window.dispatchEvent(new Event('storage'));
+
+        // Redirect to the Stack Auth sign-out URL
+        window.location.href = '/handler/signout';
+    };
+
     return (
         <header className="flex h-14 items-center justify-between gap-4 border-b px-4 md:px-6">
             <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
@@ -118,7 +185,7 @@ function DashboardHeader() {
                         className="h-8 w-8 object-contain"
                     />
                 </Link>
-                {showRegisterSelector ? (
+                {showRegisterSelector && isAdminView ? (
                     <>
                         <ChevronsRight className="h-4 w-4 hidden sm:block" />
                         <Select
@@ -175,7 +242,7 @@ function DashboardHeader() {
                 </div>
 
                 {/* Mobile view - Show dropdown menu */}
-                <div className="block md:hidden">
+                <div className="block md:block">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -194,23 +261,46 @@ function DashboardHeader() {
                                     View Reports
                                 </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem asChild>
-                                <Link href="/handler/signout" className="flex items-center">
+
+                            {/* Only show sign-out in dropdown for employee view */}
+                            {!isAdminView && isEmployeeView && (
+                                <DropdownMenuItem onClick={handleEmployeeLogout}>
                                     <LogOut className="h-4 w-4 mr-2" />
                                     Sign Out
-                                </Link>
-                            </DropdownMenuItem>
+                                </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
 
                 <Separator orientation="vertical" className="h-6 hidden md:block" />
-                <UserButton />
-                <Link href="/handler/signout" className="hidden md:block">
-                    <Button variant="outline" size="icon" title="Sign Out">
-                        <LogOut className="h-5 w-5" />
+
+                {isAdminView && !isEmployeeView ? (
+                    <>
+                        <div className="flex items-center">
+                            <UserButton />
+                        </div>
+                        <Link href="/handler/signout">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                title="Sign Out"
+                            >
+                                <LogOut className="h-5 w-5" />
+                            </Button>
+                        </Link>
+                    </>
+                ) : (
+                    // Employee sign out button - always visible
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEmployeeLogout}
+                    >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
                     </Button>
-                </Link>
+                )}
             </div>
         </header>
     );
@@ -218,12 +308,14 @@ function DashboardHeader() {
 
 export default function DashboardLayout({
     children,
+    isAdmin = true
 }: {
     children: React.ReactNode;
+    isAdmin?: boolean;
 }) {
     return (
         <main className="flex-1">
-            <DashboardHeader />
+            <DashboardHeader isAdmin={isAdmin} />
             <div className="p-2 sm:p-4 w-full max-w-full overflow-x-hidden">
                 {children}
             </div>

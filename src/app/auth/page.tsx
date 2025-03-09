@@ -3,7 +3,9 @@
 import { LoginForm } from '@/components/auth/login-form';
 import { RegisterForm } from '@/components/auth/register-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function AuthPage() {
     return (
@@ -55,6 +57,23 @@ export default function AuthPage() {
                             <RegisterForm />
                         </TabsContent>
                     </Tabs>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">
+                                Or
+                            </span>
+                        </div>
+                    </div>
+
+                    <Link href="/auth/employee-login" className="w-full">
+                        <Button variant="outline" className="w-full">
+                            Employee Login
+                        </Button>
+                    </Link>
                 </div>
             </div>
         </main>
