@@ -37,9 +37,9 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         const [currentUserPosition, setCurrentUserPosition] = useState<string>('employee');
 
         const fetchRegisterStartTime = async () => {
-            console.log('Fetching register start time...');
+
             const result = await getRegisterStartTime(parseInt(registerId), date);
-            console.log('Register start time result:', result);
+
             if ('data' in result && result.data) {
                 setRegisterStartTime(new Date(result.data.startTime));
             } else {
@@ -52,14 +52,11 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         };
 
         const fetchEmployeesAndLogs = async () => {
-            console.log('Fetching employees and logs...');
-            console.log('Register ID:', registerId);
 
             try {
                 setIsLoading(true);
                 //get the list of all the employees belong to the register
                 const employeeResult = await getRegisterEmployees(parseInt(registerId));
-                console.log('Employee result:', employeeResult);
 
                 if ('data' in employeeResult) {
                     const fetchedEmployees = employeeResult.data as Employee[];
@@ -200,7 +197,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         }, [date, registerId]);
 
         useEffect(() => {
-            console.log('Register start time updated:', registerStartTime);
+
         }, [registerStartTime]);
 
         // Calculate counts for each status
@@ -222,7 +219,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         // Filter employees based on active tab and search query
         const filterEmployees = () => {
             let filtered = employees;
-            console.log('Filtering employees for tab:', activeTab);
+
 
             // First apply status filter
             if (activeTab !== 'all') {
@@ -286,7 +283,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                         if (response.ok) {
                             const data = await response.json();
                             if (data.employee && data.employee.position) {
-                                console.log('Current user position:', data.employee.position);
+
                                 setCurrentUserPosition(data.employee.position);
                             }
                         }

@@ -24,8 +24,11 @@ export async function middleware(request: NextRequest) {
     // Check for admin user
     const user = await stackServerApp.getUser();
 
-    // Public routes that don't require authentication
+    // Redirect to dashboard if logged in and accessing home page
     if (request.nextUrl.pathname === '/') {
+        if (user) {
+            return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
         return NextResponse.next();
     }
 
@@ -54,7 +57,6 @@ export async function middleware(request: NextRequest) {
     // Other dashboard routes - only allow admin users
     if (request.nextUrl.pathname === '/dashboard' || request.nextUrl.pathname.startsWith('/dashboard/')) {
         if (!user) {
-            console.log('User not logged in. Redirecting to auth page');
             return NextResponse.redirect(new URL('/auth', request.url));
         }
         return NextResponse.next();

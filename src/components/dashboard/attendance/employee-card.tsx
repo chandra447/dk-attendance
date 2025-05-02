@@ -51,7 +51,6 @@ export function EmployeeCard({
     const lastLog = logs.length > 0 ? logs[0] : null;
     const router = useRouter();
 
-    console.log('EmployeeCard - currentUserPosition:', currentUserPosition, 'for employee:', employee.name);
 
     // Check if employee has returned from absence today
     const hasReturnedFromAbsence = logs.some(log =>
@@ -145,14 +144,11 @@ export function EmployeeCard({
 
     const handleClockOut = async () => {
         if (!presentRecord) return;
-        console.log('Starting clock-out operation for:', employee.name);
-        console.log('Using present record:', presentRecord);
-        console.log('Current logs before clock-out:', logs);
 
         onLoadingChange(true);
         try {
             const result = await clockOutEmployee(employee.id, presentRecord.id);
-            console.log('Clock-out API response:', result);
+
 
             if ('data' in result && result.data) {
                 const newLog = {
@@ -160,10 +156,10 @@ export function EmployeeCard({
                     clockIn: result.data.clockIn ? new Date(result.data.clockIn) : null,
                     clockOut: result.data.clockOut ? new Date(result.data.clockOut) : null
                 };
-                console.log('Processed new log:', newLog);
+
 
                 const newLogs = [newLog, ...logs];
-                console.log('Updated logs array:', newLogs);
+
 
                 onUpdateStatus(presentRecord, newLogs);
                 onStatusChange(employee.id);
@@ -179,14 +175,12 @@ export function EmployeeCard({
 
     const handleClockIn = async () => {
         if (!presentRecord) return;
-        console.log('Starting clock-in operation for:', employee.name);
-        console.log('Using present record:', presentRecord);
-        console.log('Current logs before clock-in:', logs);
+
 
         onLoadingChange(true);
         try {
             const result = await clockInEmployee(employee.id, presentRecord.id);
-            console.log('Clock-in API response:', result);
+
 
             if ('data' in result && result.data) {
                 // Find the latest clock-out log and update it with the new clock-in time
@@ -202,7 +196,7 @@ export function EmployeeCard({
                     return log;
                 });
 
-                console.log('Updated logs array:', updatedLogs);
+
                 onUpdateStatus(presentRecord, updatedLogs);
                 onStatusChange(employee.id);
                 toast.success("Employee clocked in successfully");
@@ -320,16 +314,13 @@ export function EmployeeCard({
     };
 
     return (
-        <Card className="relative w-full">
+        <Card className="relative w-full h-[330px]">
             {lastLog && lastLog.status === 'clock-out' && !hasReturnedFromAbsence && (
                 <div className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
             )}
 
-            {hasReturnedFromAbsence && (
-                <div className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500" />
-            )}
 
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 pb-6">
                 <div className="absolute right-4 top-4">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -361,8 +352,8 @@ export function EmployeeCard({
                     </DropdownMenu>
                 </div>
 
-                <div className="space-y-3">
-                    <div className="space-y-1">
+                <div className="flex flex-col h-full">
+                    <div className="space-y-1 mb-6">
                         <div className="flex items-center gap-2">
                             <h3 className={cn(
                                 "font-semibold text-base sm:text-lg truncate max-w-[180px] sm:max-w-none",
@@ -399,7 +390,7 @@ export function EmployeeCard({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2 mt-auto">
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={handlePresent}
@@ -460,6 +451,10 @@ export function EmployeeCard({
                                         >
                                             Clock In
                                         </Button>
+                                    )}
+                                    {/* Add placeholder when no buttons are shown to maintain consistent height */}
+                                    {!showClockOutButton && !showClockInButton && (
+                                        <div className="h-[36px]"></div>
                                     )}
                                 </>
                             )}
