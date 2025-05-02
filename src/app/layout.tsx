@@ -1,4 +1,4 @@
-import { StackProvider } from "@stackframe/stack";
+import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/lib/stack";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -30,7 +30,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
         <CustomHead />
       </head>
       <body
@@ -50,14 +49,30 @@ export default function RootLayout({
           {/* Theme handler component to update status bar color */}
           <ThemeHandler />
 
-          <StackProvider app={stackServerApp}>
-            <div className="relative min-h-screen bg-background">
-              <div className="absolute top-16 right-4 z-50">
-                <ModeToggle />
+          <StackTheme theme={{
+            light: {
+              // Light mode theme colors
+              primary: '#0f172a',
+              background: '#ffffff',
+              foreground: '#0f172a'
+            },
+            dark: {
+              // Dark mode theme colors
+              primary: '#ffffff',  // This changes the dropdown text to white in dark mode
+              background: '#0f172a',
+              foreground: '#ffffff'
+            },
+            radius: '0.5rem'
+          }}>
+            <StackProvider app={stackServerApp}>
+              <div className="relative min-h-screen bg-background">
+                <div className="absolute top-16 right-4 z-50">
+                  <ModeToggle />
+                </div>
+                {children}
               </div>
-              {children}
-            </div>
-          </StackProvider>
+            </StackProvider>
+          </StackTheme>
           <Toaster />
         </ThemeProvider>
       </body>

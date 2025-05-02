@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { BarChart, LogOut, ClipboardList, Menu } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { UserButton } from "@stackframe/stack";
+import { useUser } from "@stackframe/stack";
+import { CustomUserButton } from "@/components/custom-user-button";
 import { getRegistersByUserId, createRegister, syncUser } from "@/app/actions/register";
 import { useEffect, useState } from "react";
-import { useUser } from "@stackframe/stack";
 import { Register } from "@/app/types/register";
 import { CreateRegisterDialog } from "@/components/dashboard/create-register-dialog";
 import { useRouter, usePathname } from "next/navigation";
@@ -220,7 +220,7 @@ function DashboardHeader({ isAdmin = true }: { isAdmin?: boolean }) {
 
             <div className="flex items-center gap-2 md:gap-4">
                 {/* Desktop view - Show reports button directly */}
-                <div className="hidden md:block">
+                <div className="hidden ">
                     <Link href={selectedRegisterId ?
                         pathname.includes('/reports/') ?
                             `/dashboard/registers/${selectedRegisterId}` :
@@ -278,17 +278,8 @@ function DashboardHeader({ isAdmin = true }: { isAdmin?: boolean }) {
                 {isAdminView && !isEmployeeView ? (
                     <>
                         <div className="flex items-center">
-                            <UserButton />
+                            <CustomUserButton onSignOut={handleAdminLogout} />
                         </div>
-                        <Link href="/handler/signout">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                title="Sign Out"
-                            >
-                                <LogOut className="h-5 w-5" />
-                            </Button>
-                        </Link>
                     </>
                 ) : (
                     // Employee sign out button - always visible

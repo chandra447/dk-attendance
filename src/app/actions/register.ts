@@ -272,7 +272,7 @@ export async function markEmployeePresent(employeeId: number, date: Date) {
 
 export async function clockOutEmployee(employeeId: number, employeePresentId: number) {
     try {
-        console.log('Creating clock-out log for:', { employeeId, employeePresentId });
+
 
         // Create a new attendance log entry for clock-out
         const [log] = await db.insert(attendanceLogger).values({
@@ -286,7 +286,7 @@ export async function clockOutEmployee(employeeId: number, employeePresentId: nu
             updatedAt: new Date()
         }).returning();
 
-        console.log('Created clock-out log:', log);
+
         return { data: log };
     } catch (error) {
         console.error("Error clocking out employee:", error);

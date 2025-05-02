@@ -29,10 +29,13 @@ export function RegisterPageClient({ id }: RegisterPageClientProps) {
                     setIsEmployee(true);
                     return true;
                 }
+                // Don't log 401 errors - they're expected when not logged in as employee
+                return false;
             } catch (error) {
-                console.error('Error checking employee token:', error);
+                // Only log unexpected errors (network issues, etc.)
+                console.error('Unexpected error checking employee token:', error);
+                return false;
             }
-            return false;
         };
 
         async function fetchRegister() {
@@ -48,7 +51,7 @@ export function RegisterPageClient({ id }: RegisterPageClientProps) {
                     if (registerData) {
                         setRegister(registerData);
                     } else {
-                        console.log('Register not found for employee:', id);
+
                         setRegister(null);
                     }
                 } else if (user?.id && user.primaryEmail) {
@@ -66,11 +69,11 @@ export function RegisterPageClient({ id }: RegisterPageClientProps) {
                         if (currentRegister) {
                             setRegister(currentRegister);
                         } else {
-                            console.log('Register not found for admin:', id);
+
                             setRegister(null);
                         }
                     } else {
-                        console.log('No dbUser found');
+
                         setRegister(null);
                     }
                 } else {

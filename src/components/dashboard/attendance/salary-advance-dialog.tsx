@@ -39,7 +39,7 @@ export function SalaryAdvanceDialog({
         Object.assign(registerContext, useRegister());
     } catch (error) {
         // Context not available, will use prop instead
-        console.log("Register context not available, using prop instead");
+
     }
 
     // Use the prop registerId if provided, otherwise use the one from context
