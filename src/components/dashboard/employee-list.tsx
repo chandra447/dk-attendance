@@ -222,6 +222,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         // Filter employees based on active tab and search query
         const filterEmployees = () => {
             let filtered = employees;
+            console.log('Filtering employees for tab:', activeTab);
 
             // First apply status filter
             if (activeTab !== 'all') {
@@ -234,7 +235,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                         case 'present':
                             return presentRecord !== null && presentRecord.status === 'present';
                         case 'absent':
-                            return presentRecord !== null && presentRecord.status === 'absent';
+                            return presentRecord === null || presentRecord.status === 'absent';
                         case 'clockedOut':
                             return lastLog && lastLog.status === 'clock-out';
                         default:
