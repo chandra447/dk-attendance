@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         })
             .setProtectedHeader({ alg: 'HS256' })
             .setIssuedAt()
-            .setExpirationTime('8h') // Token expires in 8 hours
+            .setExpirationTime('5d') // Token expires in 5 days
             .sign(JWT_SECRET);
 
         // Create a response
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             value: token,
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 8 * 60 * 60, // 8 hours in seconds
+            maxAge: 5 * 24 * 60 * 60, // 5 days in seconds
             path: '/',
         });
 
