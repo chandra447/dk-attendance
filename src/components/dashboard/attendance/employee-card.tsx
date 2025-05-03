@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+// @ts-ignore
+import { createTimer } from "animejs";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,7 +32,15 @@ interface EmployeeCardProps {
     onUpdateStatus: (presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => void;
     registerStartTime: Date | null;
     currentUserPosition?: string;
+    isDisabled?: boolean;
 }
+
+// Helper function to format time as HH:MM
+const formatTime = (minutes: number): string => {
+    const hours = Math.floor(Math.abs(minutes) / 60);
+    const mins = Math.abs(minutes) % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
 
 export function EmployeeCard({
     employee,
@@ -42,8 +52,10 @@ export function EmployeeCard({
     onLoadingChange,
     onUpdateStatus,
     registerStartTime,
-    currentUserPosition = 'employee'
+    currentUserPosition = 'employee',
+    isDisabled = false
 }: EmployeeCardProps) {
+    const timerRef = useRef<HTMLSpanElement>(null);
     const [showLogDrawer, setShowLogDrawer] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [showSalaryAdvanceDialog, setShowSalaryAdvanceDialog] = useState(false);
@@ -120,6 +132,48 @@ export function EmployeeCard({
 
     const totalMinutes = calculateTotalDuration(logs);
     const isOvertime = totalMinutes > employee.durationAllowed;
+
+    // Set up anime.js timer for clock-out duration
+    useEffect(() => {
+        // Only apply the timer when there's a clock-out log and the timer ref exists
+        if (timerRef.current && lastLog?.status === 'clock-out' && lastLog.clockOut) {
+            // Create a timer using createTimer from anime.js
+            const timer = createTimer({
+                duration: 1000, // Animation will complete in 1 second
+                loop: true,     // Keep updating the timer continuously
+                frameRate: 1,   // Update once per second is enough for a clock
+                onUpdate: function (self: any) {
+                    if (timerRef.current && lastLog.clockOut) {
+                        // Calculate the current time difference
+                        const now = new Date();
+                        const clockOutTime = new Date(lastLog.clockOut);
+                        const diffInSeconds = Math.floor((now.getTime() - clockOutTime.getTime()) / 1000);
+
+                        // Format hours, minutes, seconds
+                        const hours = Math.floor(diffInSeconds / 3600);
+                        const minutes = Math.floor((diffInSeconds % 3600) / 60);
+                        const seconds = diffInSeconds % 60;
+
+                        // Format with leading zeros
+                        const formattedHours = hours.toString().padStart(2, '0');
+                        const formattedMinutes = minutes.toString().padStart(2, '0');
+                        const formattedSeconds = seconds.toString().padStart(2, '0');
+
+                        // Update the display
+                        timerRef.current.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+                    }
+                }
+            });
+
+            // Start the timer
+            timer.play();
+
+            return () => {
+                // Clean up timer when component unmounts or lastLog changes
+                timer.pause();
+            };
+        }
+    }, [lastLog]);
 
     const handlePresent = async () => {
         onLoadingChange(true);
@@ -324,7 +378,7 @@ export function EmployeeCard({
                 <div className="absolute right-4 top-4">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" disabled={isDisabled}>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -377,8 +431,11 @@ export function EmployeeCard({
                             )}
                         </div>
                         {lastLog?.status === 'clock-out' ? (
-                            <div className="text-xs sm:text-sm font-mono text-red-500">
-                                Clocked out for: {clockOutDuration}
+                            <div className="flex items-center gap-2">
+                                <div className="text-xs sm:text-sm text-red-500">Clocked out for:</div>
+                                <div className="rounded-md px-3 py-1 flex items-center justify-center w-24">
+                                    <span ref={timerRef} className="font-mono text-orange-500 text-lg block w-full text-center">{clockOutDuration}</span>
+                                </div>
                             </div>
                         ) : (
                             <div className={cn(
@@ -394,7 +451,7 @@ export function EmployeeCard({
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={handlePresent}
-                                disabled={isLoading || !!presentRecord}
+                                disabled={isLoading || !!presentRecord || isDisabled}
                                 variant={presentRecord ? "secondary" : "default"}
                                 className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
                                 size="sm"
@@ -412,6 +469,7 @@ export function EmployeeCard({
                                     variant="destructive"
                                     size="sm"
                                     className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                    disabled={isDisabled}
                                 >
                                     Mark Absent
                                 </Button>
@@ -422,6 +480,7 @@ export function EmployeeCard({
                                     variant="default"
                                     size="sm"
                                     className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                    disabled={isDisabled}
                                 >
                                     Mark Return
                                 </Button>
@@ -437,6 +496,7 @@ export function EmployeeCard({
                                             variant="outline"
                                             size="sm"
                                             className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                            disabled={isDisabled}
                                         >
                                             Clock Out
                                         </Button>
@@ -448,6 +508,7 @@ export function EmployeeCard({
                                             variant="outline"
                                             size="sm"
                                             className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                            disabled={isDisabled}
                                         >
                                             Clock In
                                         </Button>

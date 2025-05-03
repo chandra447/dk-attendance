@@ -1,4 +1,6 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
+import { useAtom, useAtomValue } from "jotai";
+import { employeeListAtom, activeTabAtom, employeeLogsAtom, currentSelectedDateAtom, userPositionAtom, employeePresentRecordsAtom, employeeSearchAtom, filteredEmployeesAtom } from "@/app/atoms/register";
 import { UserPlus, Calendar as CalendarIcon, Search, UserCheck, UserX, LogOut, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,8 +17,8 @@ import { CreateEmployeeDialog } from "@/components/dashboard/create-employee-dia
 import { EmployeeCard } from "./attendance/employee-card";
 import { Employee, EmployeeListProps, AttendanceLog, EmployeePresent } from "./types/attendance-types";
 import { RegisterStartTime } from "./register-start-time";
+import { TabType } from "./types/attendance-types";
 
-type TabType = 'all' | 'present' | 'absent' | 'clockedOut';
 
 export interface EmployeeListRef {
     refresh: () => Promise<void>;
@@ -24,17 +26,18 @@ export interface EmployeeListRef {
 
 export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
     function EmployeeList({ registerId, registerName, isEmployee = false }: EmployeeListProps, ref) {
-        const [employees, setEmployees] = useState<Employee[]>([]);
-        const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
-        const [searchQuery, setSearchQuery] = useState('');
-        const [activeTab, setActiveTab] = useState<TabType>('all');
-        const [employeeLogs, setEmployeeLogs] = useState<Record<number, AttendanceLog[]>>({});
-        const [employeePresentRecords, setEmployeePresentRecords] = useState<Record<number, EmployeePresent | null>>({});
+        // Use jotai atoms instead of local state
+        const [employees, setEmployees] = useAtom(employeeListAtom);
+        const filteredEmployees = useAtomValue(filteredEmployeesAtom);
+        const [searchQuery, setSearchQuery] = useAtom(employeeSearchAtom);
+        const [activeTab, setActiveTab] = useAtom(activeTabAtom);
+        const [employeeLogs, setEmployeeLogs] = useAtom(employeeLogsAtom);
+        const [employeePresentRecords, setEmployeePresentRecords] = useAtom(employeePresentRecordsAtom);
         const [loadingEmployeeIds, setLoadingEmployeeIds] = useState<Set<number>>(new Set());
-        const [date, setDate] = useState<Date>(new Date());
+        const [date, setDate] = useAtom(currentSelectedDateAtom);
         const [isLoading, setIsLoading] = useState(true);
         const [registerStartTime, setRegisterStartTime] = useState<Date | null>(null);
-        const [currentUserPosition, setCurrentUserPosition] = useState<string>('employee');
+        const [currentUserPosition, setCurrentUserPosition] = useAtom(userPositionAtom);
 
         const fetchRegisterStartTime = async () => {
 
@@ -200,7 +203,6 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
 
         }, [registerStartTime]);
 
-        // Calculate counts for each status
         const getCounts = () => {
             const presentCount = Object.values(employeePresentRecords).filter(record => record !== null && record.status === 'present').length;
             const absentCount = Object.values(employeePresentRecords).filter(record => record === null || (record !== null && record.status !== 'present')).length;
@@ -216,55 +218,14 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
             };
         };
 
-        // Filter employees based on active tab and search query
-        const filterEmployees = () => {
-            let filtered = employees;
-
-
-            // First apply status filter
-            if (activeTab !== 'all') {
-                filtered = employees.filter(employee => {
-                    const presentRecord = employeePresentRecords[employee.id];
-                    const logs = employeeLogs[employee.id] || [];
-                    const lastLog = logs[0];
-
-                    switch (activeTab) {
-                        case 'present':
-                            return presentRecord !== null && presentRecord.status === 'present';
-                        case 'absent':
-                            return presentRecord === null || presentRecord.status === 'absent';
-                        case 'clockedOut':
-                            return lastLog && lastLog.status === 'clock-out';
-                        default:
-                            return true;
-                    }
-                });
-            }
-
-            // Then apply search filter
-            if (searchQuery) {
-                filtered = filtered.filter(employee =>
-                    employee.name.toLowerCase().includes(searchQuery.toLowerCase())
-                );
-            }
-
-            setFilteredEmployees(filtered);
-        };
-
-        // Update filtered employees whenever relevant state changes
         useEffect(() => {
-            filterEmployees();
-        }, [employees, searchQuery, activeTab, employeeLogs, employeePresentRecords]);
+            fetchEmployeesAndLogs();
+            fetchRegisterStartTime();
+        }, [date, registerId]);
 
-        const handlePresent = async () => {
-            if (!registerStartTime) {
-                alert("Please set the register start time first");
-                return;
-            }
-            // ... rest of the function ...
-        };
+        useEffect(() => {
+        }, [registerStartTime]);
 
-        // Expose the refresh method to parent components
         useImperativeHandle(ref, () => ({
             refresh: async () => {
                 await Promise.all([
@@ -275,7 +236,6 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         }));
 
         useEffect(() => {
-            // Fetch current user's position if in employee view
             const fetchCurrentUserPosition = async () => {
                 if (isEmployee) {
                     try {
@@ -283,7 +243,6 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                         if (response.ok) {
                             const data = await response.json();
                             if (data.employee && data.employee.position) {
-
                                 setCurrentUserPosition(data.employee.position);
                             }
                         }
@@ -291,7 +250,6 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                         console.error('Error fetching current user position:', error);
                     }
                 } else {
-                    // If not in employee view, set position to admin
                     setCurrentUserPosition('admin');
                 }
             };
@@ -339,13 +297,14 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                         </p>
                     </div>
                     <div className="flex flex-col gap-4">
-                        {/* Status Tabs */}
                         <div className="flex gap-2 border-b">
                             <button
                                 onClick={() => setActiveTab('all')}
                                 className={cn(
-                                    "px-3 py-2 text-sm font-medium transition-colors hover:text-primary",
-                                    activeTab === 'all' ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                    "pb-2 text-sm font-medium",
+                                    activeTab === 'all'
+                                        ? "border-b-2 border-primary text-primary"
+                                        : "text-muted-foreground"
                                 )}
                             >
                                 All
@@ -353,33 +312,38 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                             <button
                                 onClick={() => setActiveTab('present')}
                                 className={cn(
-                                    "px-3 py-2 text-sm font-medium transition-colors hover:text-primary",
-                                    activeTab === 'present' ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                    "pb-2 text-sm font-medium",
+                                    activeTab === 'present'
+                                        ? "border-b-2 border-primary text-primary"
+                                        : "text-muted-foreground"
                                 )}
                             >
-                                Present {counts.present > 0 && `(${counts.present})`}
+                                Present
                             </button>
                             <button
                                 onClick={() => setActiveTab('absent')}
                                 className={cn(
-                                    "px-3 py-2 text-sm font-medium transition-colors hover:text-primary",
-                                    activeTab === 'absent' ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                    "pb-2 text-sm font-medium",
+                                    activeTab === 'absent'
+                                        ? "border-b-2 border-primary text-primary"
+                                        : "text-muted-foreground"
                                 )}
                             >
-                                Absent {counts.absent > 0 && `(${counts.absent})`}
+                                Absent
                             </button>
                             <button
                                 onClick={() => setActiveTab('clockedOut')}
                                 className={cn(
-                                    "px-3 py-2 text-sm font-medium transition-colors hover:text-primary",
-                                    activeTab === 'clockedOut' ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                                    "pb-2 text-sm font-medium",
+                                    activeTab === 'clockedOut'
+                                        ? "border-b-2 border-primary text-primary"
+                                        : "text-muted-foreground"
                                 )}
                             >
-                                Clocked Out {counts.clockedOut > 0 && `(${counts.clockedOut})`}
+                                Clocked Out
                             </button>
                         </div>
 
-                        {/* Search and Calendar Controls */}
                         <div className="flex flex-col sm:flex-row gap-4">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                                 <div className="relative w-full sm:w-[300px]">
@@ -434,91 +398,82 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                     </div>
                 </div>
 
-                {!registerStartTime ? (
-                    <div className="flex flex-col items-center justify-center h-[calc(100vh-24rem)] gap-4">
-                        <div className="flex flex-col items-center gap-2 text-center">
-                            <Clock className="h-12 w-12 text-muted-foreground" />
-                            <h3 className="text-lg font-semibold">Set Register Start Time</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Please set the register start time to begin marking attendance
-                            </p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredEmployees.length > 0 ? (
-                            filteredEmployees.map((employee) => (
-                                <div key={employee.id} className="w-full">
-                                    <EmployeeCard
-                                        employee={employee}
-                                        date={date}
-                                        isLoading={loadingEmployeeIds.has(employee.id)}
-                                        presentRecord={employeePresentRecords[employee.id]}
-                                        logs={employeeLogs[employee.id] || []}
-                                        onStatusChange={handleEmployeeUpdate}
-                                        onLoadingChange={(isLoading) => {
-                                            setLoadingEmployeeIds(prev => {
-                                                const newSet = new Set(prev);
-                                                if (isLoading) {
-                                                    newSet.add(employee.id);
-                                                } else {
-                                                    newSet.delete(employee.id);
-                                                }
-                                                return newSet;
-                                            });
-                                        }}
-                                        onUpdateStatus={(presentRecord, logs) => {
-                                            updateEmployeeStatus(employee.id, presentRecord, logs);
-                                        }}
-                                        registerStartTime={registerStartTime}
-                                        currentUserPosition={currentUserPosition}
-                                    />
-                                </div>
-                            ))
-                        ) : (
-                            <div className="col-span-full flex flex-col items-center justify-center h-[calc(100vh-24rem)] gap-4">
-                                <div className="flex flex-col items-center gap-2 text-center">
-                                    {activeTab === 'present' && (
-                                        <>
-                                            <UserCheck className="h-12 w-12 text-muted-foreground" />
-                                            <h3 className="text-lg font-semibold">No Present Employees</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                No employees have been marked as present today
-                                            </p>
-                                        </>
-                                    )}
-                                    {activeTab === 'absent' && (
-                                        <>
-                                            <UserX className="h-12 w-12 text-muted-foreground" />
-                                            <h3 className="text-lg font-semibold">No Absent Employees</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                All employees have been marked as present
-                                            </p>
-                                        </>
-                                    )}
-                                    {activeTab === 'clockedOut' && (
-                                        <>
-                                            <LogOut className="h-12 w-12 text-muted-foreground" />
-                                            <h3 className="text-lg font-semibold">No Clocked Out Employees</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                No employees are currently clocked out
-                                            </p>
-                                        </>
-                                    )}
-                                    {activeTab === 'all' && searchQuery && (
-                                        <>
-                                            <Search className="h-12 w-12 text-muted-foreground" />
-                                            <h3 className="text-lg font-semibold">No Results Found</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                No employees match your search criteria
-                                            </p>
-                                        </>
-                                    )}
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredEmployees.length > 0 ? (
+                        filteredEmployees.map((employee) => (
+                            <div key={employee.id} className="w-full">
+                                <EmployeeCard
+                                    employee={employee}
+                                    date={date}
+                                    isLoading={loadingEmployeeIds.has(employee.id)}
+                                    presentRecord={employeePresentRecords[employee.id] || null}
+                                    logs={employeeLogs[employee.id] || []}
+                                    onStatusChange={(employeeId) => {
+                                        handleEmployeeUpdate(employeeId);
+                                    }}
+                                    onLoadingChange={(isLoading) => {
+                                        setLoadingEmployeeIds(prev => {
+                                            const newSet = new Set(prev);
+                                            if (isLoading) {
+                                                newSet.add(employee.id);
+                                            } else {
+                                                newSet.delete(employee.id);
+                                            }
+                                            return newSet;
+                                        });
+                                    }}
+                                    onUpdateStatus={(presentRecord, logs) => {
+                                        updateEmployeeStatus(employee.id, presentRecord, logs);
+                                    }}
+                                    registerStartTime={registerStartTime}
+                                    currentUserPosition={currentUserPosition}
+                                    isDisabled={!registerStartTime}
+                                />
                             </div>
-                        )}
-                    </div>
-                )}
+                        ))
+                    ) : (
+                        <div className="col-span-full flex flex-col items-center justify-center h-[calc(100vh-24rem)] gap-4">
+                            <div className="flex flex-col items-center gap-2 text-center">
+                                {activeTab === 'present' && (
+                                    <>
+                                        <UserCheck className="h-12 w-12 text-muted-foreground" />
+                                        <h3 className="text-lg font-semibold">No Present Employees</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            No employees have been marked as present today
+                                        </p>
+                                    </>
+                                )}
+                                {activeTab === 'absent' && (
+                                    <>
+                                        <UserX className="h-12 w-12 text-muted-foreground" />
+                                        <h3 className="text-lg font-semibold">No Absent Employees</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            All employees have been marked as present
+                                        </p>
+                                    </>
+                                )}
+                                {activeTab === 'clockedOut' && (
+                                    <>
+                                        <LogOut className="h-12 w-12 text-muted-foreground" />
+                                        <h3 className="text-lg font-semibold">No Clocked Out Employees</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            No employees are currently clocked out
+                                        </p>
+                                    </>
+                                )}
+                                {activeTab === 'all' && searchQuery && (
+                                    <>
+                                        <Search className="h-12 w-12 text-muted-foreground" />
+                                        <h3 className="text-lg font-semibold">No Results Found</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            No employees match your search criteria
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }

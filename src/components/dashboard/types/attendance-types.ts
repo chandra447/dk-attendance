@@ -9,7 +9,7 @@ export interface Employee {
     endTime: string;
     durationAllowed: number;
 }
-
+export type TabType = 'all' | 'present' | 'absent' | 'clockedOut';
 export interface EmployeeListProps {
     registerId: string;
     registerName: string;
