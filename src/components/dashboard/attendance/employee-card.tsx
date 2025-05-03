@@ -30,6 +30,7 @@ interface EmployeeCardProps {
     onUpdateStatus: (presentRecord: EmployeePresent | null, logs: AttendanceLog[]) => void;
     registerStartTime: Date | null;
     currentUserPosition?: string;
+    isDisabled?: boolean;
 }
 
 export function EmployeeCard({
@@ -42,7 +43,8 @@ export function EmployeeCard({
     onLoadingChange,
     onUpdateStatus,
     registerStartTime,
-    currentUserPosition = 'employee'
+    currentUserPosition = 'employee',
+    isDisabled = false
 }: EmployeeCardProps) {
     const [showLogDrawer, setShowLogDrawer] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
@@ -324,7 +326,7 @@ export function EmployeeCard({
                 <div className="absolute right-4 top-4">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" disabled={isDisabled}>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -394,7 +396,7 @@ export function EmployeeCard({
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={handlePresent}
-                                disabled={isLoading || !!presentRecord}
+                                disabled={isLoading || !!presentRecord || isDisabled}
                                 variant={presentRecord ? "secondary" : "default"}
                                 className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
                                 size="sm"
@@ -412,6 +414,7 @@ export function EmployeeCard({
                                     variant="destructive"
                                     size="sm"
                                     className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                    disabled={isDisabled}
                                 >
                                     Mark Absent
                                 </Button>
@@ -422,6 +425,7 @@ export function EmployeeCard({
                                     variant="default"
                                     size="sm"
                                     className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                    disabled={isDisabled}
                                 >
                                     Mark Return
                                 </Button>
@@ -437,6 +441,7 @@ export function EmployeeCard({
                                             variant="outline"
                                             size="sm"
                                             className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                            disabled={isDisabled}
                                         >
                                             Clock Out
                                         </Button>
@@ -448,6 +453,7 @@ export function EmployeeCard({
                                             variant="outline"
                                             size="sm"
                                             className="rounded-full text-xs sm:text-sm h-8 sm:h-9"
+                                            disabled={isDisabled}
                                         >
                                             Clock In
                                         </Button>

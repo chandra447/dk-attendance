@@ -41,7 +41,7 @@ export function CustomUserButton({ onSignOut }: CustomUserButtonProps) {
             {user.profileImageUrl ? (
               <AvatarImage src={user.profileImageUrl} alt={user.displayName || 'User'} />
             ) : (
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary text-primary-foreground text-red-500">
                 {getInitials()}
               </AvatarFallback>
             )}
@@ -53,7 +53,7 @@ export function CustomUserButton({ onSignOut }: CustomUserButtonProps) {
           <p className="text-sm font-medium">{user.displayName || 'User'}</p>
           <p className="text-xs text-muted-foreground truncate">{user.primaryEmail}</p>
         </div>
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={() => {
             setOpen(false);
             router.push('/dashboard/settings');
