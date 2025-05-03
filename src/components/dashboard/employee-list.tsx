@@ -1,6 +1,6 @@
 import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { employeeListAtom, activeTabAtom, employeeLogsAtom, currentSelectedDateAtom, userPositionAtom, employeePresentRecordsAtom, employeeSearchAtom, filteredEmployeesAtom } from "@/app/atoms/register";
+import { employeeListAtom, activeTabAtom, employeeLogsAtom, currentSelectedDateAtom, userPositionAtom, employeePresentRecordsAtom, employeeSearchAtom, filteredEmployeesAtom, employeeTabsCountAtom } from "@/app/atoms/register";
 import { UserPlus, Calendar as CalendarIcon, Search, UserCheck, UserX, LogOut, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,6 +33,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
         const [activeTab, setActiveTab] = useAtom(activeTabAtom);
         const [employeeLogs, setEmployeeLogs] = useAtom(employeeLogsAtom);
         const [employeePresentRecords, setEmployeePresentRecords] = useAtom(employeePresentRecordsAtom);
+        const [tabCounts, setTabCounts] = useAtom(employeeTabsCountAtom);
         const [loadingEmployeeIds, setLoadingEmployeeIds] = useState<Set<number>>(new Set());
         const [date, setDate] = useAtom(currentSelectedDateAtom);
         const [isLoading, setIsLoading] = useState(true);
@@ -203,7 +204,8 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
 
         }, [registerStartTime]);
 
-        const getCounts = () => {
+        // Calculate and update tab counts
+        const updateTabCounts = () => {
             const presentCount = Object.values(employeePresentRecords).filter(record => record !== null && record.status === 'present').length;
             const absentCount = Object.values(employeePresentRecords).filter(record => record === null || (record !== null && record.status !== 'present')).length;
 
@@ -211,12 +213,18 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                 logs.length > 0 && logs[0].status === 'clock-out'
             ).length;
 
-            return {
+            setTabCounts({
+                all: employees.length,
                 present: presentCount,
                 absent: absentCount,
                 clockedOut: clockedOutCount
-            };
+            });
         };
+        
+        // Update tab counts whenever relevant data changes
+        useEffect(() => {
+            updateTabCounts();
+        }, [employees, employeePresentRecords, employeeLogs]);
 
         useEffect(() => {
             fetchEmployeesAndLogs();
@@ -285,7 +293,8 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
             );
         }
 
-        const counts = getCounts();
+        // Use the tabCounts state that's already defined at the top of the component
+        const counts = tabCounts;
 
         return (
             <div className="space-y-4">
@@ -297,7 +306,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                         </p>
                     </div>
                     <div className="flex flex-col gap-4">
-                        <div className="flex gap-2 border-b">
+                        <div className="flex gap-4 border-b">
                             <button
                                 onClick={() => setActiveTab('all')}
                                 className={cn(
@@ -307,7 +316,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                                         : "text-muted-foreground"
                                 )}
                             >
-                                All
+                                All {tabCounts.all > 0 && `(${tabCounts.all})`}
                             </button>
                             <button
                                 onClick={() => setActiveTab('present')}
@@ -318,7 +327,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                                         : "text-muted-foreground"
                                 )}
                             >
-                                Present
+                                Present {tabCounts.present > 0 && `(${tabCounts.present})`}
                             </button>
                             <button
                                 onClick={() => setActiveTab('absent')}
@@ -329,7 +338,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                                         : "text-muted-foreground"
                                 )}
                             >
-                                Absent
+                                Absent {tabCounts.absent > 0 && `(${tabCounts.absent})`}
                             </button>
                             <button
                                 onClick={() => setActiveTab('clockedOut')}
@@ -340,7 +349,7 @@ export const EmployeeList = forwardRef<EmployeeListRef, EmployeeListProps>(
                                         : "text-muted-foreground"
                                 )}
                             >
-                                Clocked Out
+                                Clocked Out {tabCounts.clockedOut > 0 && `(${tabCounts.clockedOut})`}
                             </button>
                         </div>
 
