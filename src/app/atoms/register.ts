@@ -11,6 +11,20 @@ export const userPositionAtom = atomWithImmer<string>('employee');
 export const employeePresentRecordsAtom = atomWithImmer<Record<number, EmployeePresent | null>>({});
 export const employeeSearchAtom = atomWithImmer<string>('');
 
+export type employeeTabsValues = {
+  all: number;
+  present: number;
+  absent: number;
+  clockedOut: number;
+}
+
+export const employeeTabsCountAtom = atomWithImmer<employeeTabsValues>({
+  all: 0,
+  present: 0,
+  absent: 0,
+  clockedOut: 0
+});
+
 // Derived atom for filtered employees based on active tab and search query
 export const filteredEmployeesAtom = atom((get) => {
   const employees = get(employeeListAtom);
@@ -18,25 +32,25 @@ export const filteredEmployeesAtom = atom((get) => {
   const searchQuery = get(employeeSearchAtom);
   const employeeLogs = get(employeeLogsAtom);
   const employeePresentRecords = get(employeePresentRecordsAtom);
-  
+
   // Filter by search query first
   let filtered = employees;
   if (searchQuery.trim() !== '') {
     const query = searchQuery.toLowerCase();
-    filtered = employees.filter(emp => 
-      emp.name.toLowerCase().includes(query) || 
-      emp.position.toLowerCase().includes(query) || 
+    filtered = employees.filter(emp =>
+      emp.name.toLowerCase().includes(query) ||
+      emp.position.toLowerCase().includes(query) ||
       emp.department.toLowerCase().includes(query)
     );
   }
-  
+
   // Then filter by tab
   if (activeTab !== 'all') {
     filtered = filtered.filter(emp => {
       const presentRecord = employeePresentRecords[emp.id];
       const logs = employeeLogs[emp.id] || [];
       const lastLog = logs.length > 0 ? logs[0] : null;
-      
+
       switch (activeTab) {
         case 'present':
           return presentRecord !== null && presentRecord.status === 'present';
@@ -49,6 +63,6 @@ export const filteredEmployeesAtom = atom((get) => {
       }
     });
   }
-  
+
   return filtered;
 });
